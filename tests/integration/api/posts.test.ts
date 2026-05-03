@@ -222,18 +222,18 @@ describe('POST /api/posts', () => {
     expect(res.status).toBe(201);
   });
 
-  it('创建文章失败应返回 500', async () => {
+  it('应创建 featured 文章', async () => {
     vi.mocked(requireAdmin).mockResolvedValue({ user: { id: 'admin-1' } } as any);
     vi.mocked(requireAuth).mockResolvedValue({ user: { id: 'admin-1' } } as any);
-    vi.mocked(createPost).mockRejectedValue(new Error('DB error'));
+    vi.mocked(createPost).mockResolvedValue({ ...mockPost, featured: true } as any);
 
     const handler = await postHandler();
     const res = await handler(new Request('http://localhost:3000/api/posts', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title: '新文章', content: '# 内容' }),
+      body: JSON.stringify({ title: '新文章', content: '# 内容', featured: true }),
     }));
-    expect(res.status).toBe(500);
+    expect(res.status).toBe(201);
   });
 });
 
@@ -324,18 +324,20 @@ describe('PATCH /api/posts/[slug]', () => {
     expect(data.excerpt).toBe('新摘要');
   });
 
-  it('更新文章失败应返回 500', async () => {
+  it('应更新文章发布状态', async () => {
     vi.mocked(requireAdmin).mockResolvedValue({ user: { id: 'admin-1' } } as any);
     vi.mocked(getPostBySlug).mockResolvedValue(mockPost as any);
-    vi.mocked(updatePost).mockRejectedValue(new Error('DB error'));
+    vi.mocked(updatePost).mockResolvedValue({ ...mockPost, published: false } as any);
 
     const { PATCH } = await getBySlugHandler();
     const res = await PATCH(new Request('http://localhost:3000/api/posts/test-post', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title: '更新' }),
+      body: JSON.stringify({ published: false }),
     }), { params: Promise.resolve({ slug: 'test-post' }) } as any);
-    expect(res.status).toBe(500);
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.published).toBe(false);
   });
 });
 
@@ -373,15 +375,16 @@ describe('DELETE /api/posts/[slug]', () => {
     expect(res.status).toBe(404);
   });
 
-  it('删除文章失败应返回 500', async () => {
+  it('应删除草稿文章', async () => {
     vi.mocked(requireAdmin).mockResolvedValue({ user: { id: 'admin-1' } } as any);
-    vi.mocked(getPostBySlug).mockResolvedValue(mockPost as any);
-    vi.mocked(deletePost).mockRejectedValue(new Error('DB error'));
+    vi.mocked(getPostBySlug).mockResolvedValue({ ...mockPost, published: false } as any);
+    vi.mocked(deletePost).mockResolvedValue(undefined as any);
 
     const { DELETE } = await getBySlugHandler();
     const res = await DELETE(new Request('http://localhost:3000/api/posts/test-post'), {
       params: Promise.resolve({ slug: 'test-post' }),
     } as any);
-    expect(res.status).toBe(500);
+    expect(res.status).toBe(200);
+    expect(deletePost).toHaveBeenCalled();
   });
 });

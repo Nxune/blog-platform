@@ -1,6 +1,19 @@
 import Link from "next/link";
+import { prisma } from "@/lib/prisma";
+import { PostCard } from "@/components/blog/PostCard";
 
-export default function HomePage() {
+export default async function HomePage() {
+  const posts = await prisma.post.findMany({
+    where: { published: true },
+    include: {
+      author: { select: { id: true, name: true, email: true, image: true } },
+      tags: { include: { tag: true } },
+      _count: { select: { comments: true } },
+    },
+    orderBy: { publishedAt: "desc" },
+    take: 6,
+  });
+
   return (
     <div className="mx-auto max-w-6xl px-4 py-12">
       <section className="py-20 text-center">
@@ -31,11 +44,23 @@ export default function HomePage() {
             查看全部
           </Link>
         </div>
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        {posts.length === 0 ? (
           <p className="col-span-full py-12 text-center text-muted-foreground">
             暂无文章
           </p>
-        </div>
+        ) : (
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {posts.map((post) => (
+              <PostCard
+                key={post.id}
+                post={{
+                  ...post,
+                  author: { ...post.author, image: post.author.image ?? null },
+                }}
+              />
+            ))}
+          </div>
+        )}
       </section>
     </div>
   );
