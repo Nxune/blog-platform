@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireSuperAdmin, getUserId } from "@/lib/auth-helpers";
 import bcrypt from "bcryptjs";
+import { logAuditAction } from "@/services/audit.service";
 
 export async function PATCH(
   request: Request,
@@ -69,9 +70,12 @@ export async function PATCH(
       select: { id: true, name: true, email: true, role: true },
     });
 
-    console.log(
-      `[SuperAdmin] ${adminId} 修改了用户 ${id} 角色: ${target.role} -> ${role}`
-    );
+    await logAuditAction({
+      action: "USER_ROLE_CHANGE",
+      userId: adminId,
+      targetId: id,
+      details: `${target.role} -> ${role} (${target.email})`,
+    });
 
     return NextResponse.json(updated);
   } catch (error) {

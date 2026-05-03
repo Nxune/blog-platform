@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireSuperAdmin, getUserId } from "@/lib/auth-helpers";
 import bcrypt from "bcryptjs";
+import { logAuditAction } from "@/services/audit.service";
 
 export async function GET(
   _request: Request,
@@ -90,9 +91,12 @@ export async function DELETE(
 
     await prisma.user.delete({ where: { id } });
 
-    console.log(
-      `[SuperAdmin] ${adminId} 删除了用户 ${id} (${target.email}, role=${target.role})`
-    );
+    await logAuditAction({
+      action: "USER_DELETE",
+      userId: adminId,
+      targetId: id,
+      details: `email=${target.email}, role=${target.role}`,
+    });
 
     return NextResponse.json({ success: true });
   } catch (error) {
