@@ -20,7 +20,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
   const pathname = usePathname();
 
   return (
-    <AuthGuard adminOnly>
+    <AuthGuard>
       <div className="flex min-h-[calc(100vh-4rem)]">
         <aside className="hidden w-56 border-r md:block">
           <nav className="space-y-1 p-4">

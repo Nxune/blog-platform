@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { listPosts, createPost } from "@/services/post.service";
-import { requireAuth, requireAdmin } from "@/lib/auth-helpers";
+import { requireAuth } from "@/lib/auth-helpers";
 import { postSchema } from "@/lib/validations";
 
 export async function GET(request: Request) {
@@ -19,9 +19,9 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    await requireAdmin();
+    await requireAuth();
   } catch {
-    return NextResponse.json({ error: "无权限" }, { status: 403 });
+    return NextResponse.json({ error: "请先登录" }, { status: 401 });
   }
 
   try {

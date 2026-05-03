@@ -96,6 +96,13 @@ export async function moderateComment(commentId: string, status: CommentStatus) 
   return mapComment(comment);
 }
 
+export async function getCommentById(commentId: string) {
+  return prisma.comment.findUnique({
+    where: { id: commentId },
+    select: { id: true, authorId: true, postId: true, content: true, status: true },
+  });
+}
+
 export async function deleteComment(commentId: string) {
   await prisma.comment.delete({ where: { id: commentId } });
 }
