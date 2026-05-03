@@ -33,7 +33,10 @@ export async function GET(
     if (error instanceof Error && error.message === "FORBIDDEN") {
       return NextResponse.json({ error: "无权限" }, { status: 403 });
     }
-    return NextResponse.json({ error: "请先登录" }, { status: 401 });
+    if (error instanceof Error && error.message === "UNAUTHORIZED") {
+      return NextResponse.json({ error: "请先登录" }, { status: 401 });
+    }
+    return NextResponse.json({ error: "操作失败" }, { status: 500 });
   }
 }
 
@@ -67,6 +70,11 @@ export async function DELETE(
       );
     }
 
+    // Cascade delete user's content
+    await prisma.comment.deleteMany({ where: { authorId: id } });
+    await prisma.postTag.deleteMany({ where: { post: { authorId: id } } });
+    await prisma.comment.deleteMany({ where: { post: { authorId: id } } });
+    await prisma.post.deleteMany({ where: { authorId: id } });
     await prisma.user.delete({ where: { id } });
 
     logAuditAction({
