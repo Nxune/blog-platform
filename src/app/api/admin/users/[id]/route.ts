@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireSuperAdmin, getUserId } from "@/lib/auth-helpers";
-import { compare } from "bcryptjs";
 import { logAuditAction } from "@/services/audit.service";
 
 export async function GET(
@@ -55,28 +54,7 @@ export async function DELETE(
       );
     }
 
-    // Verify current password
-    const { password } = await request.json();
-    if (!password || typeof password !== "string") {
-      return NextResponse.json(
-        { error: "需要当前密码验证" },
-        { status: 400 }
-      );
-    }
-
-    const admin = await prisma.user.findUnique({
-      where: { id: adminId },
-      select: { password: true },
-    });
-    if (!admin?.password) {
-      return NextResponse.json({ error: "验证失败" }, { status: 400 });
-    }
-    const valid = await compare(password, admin.password);
-    if (!valid) {
-      return NextResponse.json({ error: "密码错误" }, { status: 400 });
-    }
-
-    const target = await prisma.user.findUnique({ where: { id } });
+    const target= await prisma.user.findUnique({ where: { id } });
     if (!target) {
       return NextResponse.json({ error: "用户不存在" }, { status: 404 });
     }

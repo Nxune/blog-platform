@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireSuperAdmin, getUserId } from "@/lib/auth-helpers";
-import { compare } from "bcryptjs";
 import { logAuditAction } from "@/services/audit.service";
 
 export async function PATCH(
@@ -13,7 +12,7 @@ export async function PATCH(
     const adminId = getUserId(session);
     const { id } = await params;
 
-    const { role, password } = await request.json();
+    const { role } = await request.json();
 
     // Cannot modify self
     if (adminId === id) {
@@ -29,26 +28,6 @@ export async function PATCH(
         { error: "无效的角色值，仅支持 USER 或 ADMIN" },
         { status: 400 }
       );
-    }
-
-    // Verify current password
-    if (!password || typeof password !== "string") {
-      return NextResponse.json(
-        { error: "需要当前密码验证" },
-        { status: 400 }
-      );
-    }
-
-    const admin = await prisma.user.findUnique({
-      where: { id: adminId },
-      select: { password: true },
-    });
-    if (!admin?.password) {
-      return NextResponse.json({ error: "验证失败" }, { status: 400 });
-    }
-    const valid = await compare(password, admin.password);
-    if (!valid) {
-      return NextResponse.json({ error: "密码错误" }, { status: 400 });
     }
 
     const target = await prisma.user.findUnique({ where: { id } });

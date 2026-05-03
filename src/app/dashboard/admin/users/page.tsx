@@ -45,12 +45,13 @@ export default function AdminUsersPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [selectAll, setSelectAll] = useState(false);
 
-  // Password confirmation modal
-  const [password, setPassword] = useState("");
+  // YES confirmation modal
+  const [confirmText, setConfirmText] = useState("");
   const [modalAction, setModalAction] = useState<{
     type: "role" | "delete" | "batch-role" | "batch-delete";
     userId?: string;
     newRole?: string;
+    targetName?: string;
   } | null>(null);
   const [actionError, setActionError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -104,30 +105,30 @@ export default function AdminUsersPage() {
 
   const handleRoleChange = (userId: string, newRole: string) => {
     setModalAction({ type: "role", userId, newRole });
-    setPassword("");
+    setConfirmText("");
     setActionError("");
   };
 
   const handleDelete = (userId: string) => {
     setModalAction({ type: "delete", userId });
-    setPassword("");
+    setConfirmText("");
     setActionError("");
   };
 
   const handleBatchRole = (newRole: string) => {
     setModalAction({ type: "batch-role", newRole });
-    setPassword("");
+    setConfirmText("");
     setActionError("");
   };
 
   const handleBatchDelete = () => {
     setModalAction({ type: "batch-delete" });
-    setPassword("");
+    setConfirmText("");
     setActionError("");
   };
 
   const confirmAction = async () => {
-    if (!modalAction || !password) return;
+    if (!modalAction || confirmText !== "YES") return;
     setIsSubmitting(true);
     setActionError("");
 
@@ -135,33 +136,23 @@ export default function AdminUsersPage() {
       let res: Response;
 
       if (modalAction.type === "role") {
-        res = await fetch(
-          `/api/admin/users/${modalAction.userId}/role`,
-          {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              role: modalAction.newRole,
-              password,
-            }),
-          }
-        );
+        res = await fetch(`/api/admin/users/${modalAction.userId}/role`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ role: modalAction.newRole }),
+        });
       } else if (modalAction.type === "delete") {
         res = await fetch(`/api/admin/users/${modalAction.userId}`, {
           method: "DELETE",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ password }),
         });
       } else {
         res = await fetch("/api/admin/users/batch", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            action:
-              modalAction.type === "batch-role" ? "role" : "delete",
+            action: modalAction.type === "batch-role" ? "role" : "delete",
             userIds: Array.from(selectedIds),
             role: modalAction.newRole,
-            password,
           }),
         });
       }
@@ -173,7 +164,7 @@ export default function AdminUsersPage() {
       }
 
       setModalAction(null);
-      setPassword("");
+      setConfirmText("");
       setSelectedIds(new Set());
       setSelectAll(false);
       fetchUsers();
@@ -394,37 +385,38 @@ export default function AdminUsersPage() {
                     ? `将 ${selectedIds.size} 位选中用户的角色修改为 ${modalAction.newRole === "ADMIN" ? "管理员" : "用户"}`
                     : `确定删除选中的 ${selectedIds.size} 位用户？此操作不可撤销。`}
             </p>
-            <p className="mb-4 text-xs text-destructive">
-              需要输入您的当前密码进行验证
+            <p className="mb-3 text-sm font-semibold text-destructive">
+              ⚠ 此操作不可撤销，请在下方输入 YES 确认
             </p>
             <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="当前密码"
-              className="mb-4 w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary"
+              type="text"
+              value={confirmText}
+              onChange={(e) => setConfirmText(e.target.value.toUpperCase())}
+              placeholder="输入 YES 确认"
+              className="mb-4 w-full rounded-lg border-2 border-destructive/30 px-3 py-2 text-sm font-bold tracking-widest text-destructive outline-none focus:border-destructive focus:ring-2 focus:ring-destructive/20"
+              maxLength={3}
             />
             {actionError && (
               <p className="mb-4 text-sm text-destructive">{actionError}</p>
             )}
             <div className="flex justify-end gap-3">
               <button
-                onClick={() => setModalAction(null)}
+                onClick={() => { setModalAction(null); setConfirmText(""); }}
                 className="rounded-lg border px-4 py-2 text-sm hover:bg-muted"
               >
                 取消
               </button>
               <button
                 onClick={confirmAction}
-                disabled={!password || isSubmitting}
-                className={`rounded-lg px-4 py-2 text-sm text-white disabled:opacity-50 ${
+                disabled={confirmText !== "YES" || isSubmitting}
+                className={`rounded-lg px-4 py-2 text-sm text-white disabled:opacity-40 ${
                   modalAction.type === "delete" ||
                   modalAction.type === "batch-delete"
                     ? "bg-destructive hover:opacity-90"
                     : "bg-primary hover:opacity-90"
                 }`}
               >
-                {isSubmitting ? "处理中..." : "确认"}
+                {isSubmitting ? "处理中..." : "确认执行"}
               </button>
             </div>
           </div>
