@@ -75,7 +75,6 @@ export async function POST(request: Request) {
 
       // Cascade delete user's content before deleting users
       await prisma.comment.deleteMany({ where: { authorId: { in: validIds } } });
-      await prisma.postTag.deleteMany({ where: { post: { authorId: { in: validIds } } } });
       await prisma.comment.deleteMany({ where: { post: { authorId: { in: validIds } } } });
       await prisma.post.deleteMany({ where: { authorId: { in: validIds } } });
       await prisma.user.deleteMany({

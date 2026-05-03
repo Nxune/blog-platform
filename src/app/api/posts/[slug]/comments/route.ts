@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getCommentsByPostSlug, createComment } from "@/services/comment.service";
 import { requireAuth } from "@/lib/auth-helpers";
 import { commentSchema } from "@/lib/validations";
+import { rateLimit } from "@/lib/rate-limit";
 
 export async function GET(
   _request: Request,
@@ -32,6 +33,11 @@ export async function POST(
   }
 
   const userId = (session.user as { id: string }).id;
+
+  const rl = rateLimit(`comment:${userId}`, { windowMs: 60_000, max: 10 });
+  if (!rl.success) {
+    return NextResponse.json({ error: "评论过于频繁，请稍后再试" }, { status: 429 });
+  }
 
   const { slug } = await params;
   const body = await request.json();

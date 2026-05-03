@@ -1,13 +1,24 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import crypto from "crypto";
+import { rateLimit } from "@/lib/rate-limit";
 
 export async function POST(request: Request) {
   try {
+    const ip =
+      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+      request.headers.get("x-real-ip") ??
+      "unknown";
+
+    const rl = rateLimit(`forgot-password:${ip}`, { windowMs: 60_000, max: 3 });
+    if (!rl.success) {
+      return NextResponse.json({ error: "请求过于频繁，请稍后再试" }, { status: 429 });
+    }
+
     const { email } = await request.json();
 
-    if (!email || typeof email !== "string") {
-      return NextResponse.json({ error: "请输入邮箱地址" }, { status: 400 });
+    if (!email || typeof email !== "string" || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return NextResponse.json({ error: "请输入有效的邮箱地址" }, { status: 400 });
     }
 
     // Always return success to prevent email enumeration

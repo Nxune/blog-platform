@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { compare, hash } from "bcryptjs";
 import { NextResponse } from "next/server";
+import { rateLimit } from "@/lib/rate-limit";
 
 export async function GET() {
   const session = await auth();
@@ -41,6 +42,11 @@ export async function PATCH(request: Request) {
   const { type, ...data } = body;
 
   if (type === "password") {
+    const rl = rateLimit(`password-change:${session.user.id}`, { windowMs: 60_000, max: 3 });
+    if (!rl.success) {
+      return NextResponse.json({ error: "请求过于频繁，请稍后再试" }, { status: 429 });
+    }
+
     const { currentPassword, newPassword } = data;
     if (!currentPassword || !newPassword) {
       return NextResponse.json({ error: "请填写当前密码和新密码" }, { status: 400 });

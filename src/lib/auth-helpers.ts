@@ -1,4 +1,5 @@
 import { auth } from "./auth";
+import type { Session } from "next-auth";
 
 function isAdmin(role: string): boolean {
   return role === "ADMIN" || role === "SUPER_ADMIN";
@@ -51,6 +52,9 @@ export async function requireOwner(
   throw new Error(`您没有权限操作此${resourceName}`);
 }
 
-export function getUserId(session: Record<string, unknown>) {
-  return (session.user as Record<string, unknown>).id as string;
+export function getUserId(session: Session | Record<string, unknown>) {
+  if ("user" in session && session.user && typeof session.user === "object") {
+    return ((session.user as Record<string, unknown>).id as string) ?? "";
+  }
+  return "";
 }
