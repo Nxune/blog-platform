@@ -15,7 +15,7 @@ export default async function DashboardPostsPage() {
   const userId = (session.user as Record<string, unknown>).id as string;
 
   const posts = await prisma.post.findMany({
-    where: role === "ADMIN" ? undefined : { authorId: userId },
+    where: role === "ADMIN" || role === "SUPER_ADMIN" ? undefined : { authorId: userId },
     select: {
       id: true,
       title: true,

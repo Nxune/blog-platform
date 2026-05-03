@@ -6,7 +6,8 @@ export default async function DashboardTagsPage() {
   if (!session?.user) {
     redirect("/login");
   }
-  if ((session.user as Record<string, unknown>).role !== "ADMIN") {
+  const role = (session.user as Record<string, unknown>).role as string;
+  if (role !== "ADMIN" && role !== "SUPER_ADMIN") {
     redirect("/dashboard");
   }
 
