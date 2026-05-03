@@ -7,14 +7,15 @@ export const dynamic = "force-dynamic";
 
 export default async function DashboardPostsPage() {
   const session = await auth();
-  if (
-    !session?.user ||
-    (session.user as Record<string, unknown>).role !== "ADMIN"
-  ) {
+  if (!session?.user) {
     redirect("/login");
   }
 
+  const role = (session.user as Record<string, unknown>).role as string;
+  const userId = (session.user as Record<string, unknown>).id as string;
+
   const posts = await prisma.post.findMany({
+    where: role === "ADMIN" ? undefined : { authorId: userId },
     select: {
       id: true,
       title: true,
