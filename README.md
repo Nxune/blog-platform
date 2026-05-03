@@ -1,15 +1,18 @@
-# Blog Platform
+# AI Coding
 
-生产级博客平台，基于 Next.js 16 + NextAuth.js + Prisma + PostgreSQL。
+AI Coding 是一个面向开发者的技术社区。分享技术见解，交流编程经验，一起探索 AI 与代码的无限可能。
+
+基于 Next.js 16 + NextAuth.js + Prisma 构建。
 
 ## 功能特性
 
-- **用户系统** — 注册、登录、NextAuth.js 会话管理、OAuth (GitHub/Google)
-- **文章管理** — Markdown 编辑器 (TipTap)、标签分类、草稿/发布/归档状态
-- **评论系统** — 嵌套回复、审核管理、基础垃圾评论检测
-- **权限控制** — 读者/作者/管理员角色、RBAC
+- **社区发帖** — TipTap 富文本编辑器、标签分类、Markdown 支持
+- **讨论区** — 嵌套评论回复、审核管理、垃圾评论检测
+- **用户系统** — 注册登录、OAuth (GitHub/Google)、密码找回
+- **三级权限** — SUPER_ADMIN / ADMIN / USER 角色体系
+- **超级管理员** — 数据库级用户管理、全局内容管控
 - **SEO** — SSR/SSG 渲染、ISR 增量静态生成
-- **响应式设计** — 桌面端和移动端适配
+- **简约 UI** — Tailwind CSS 响应式设计
 
 ## 快速开始
 
@@ -66,12 +69,13 @@ blog-platform/
 │   └── schema.prisma       # 数据模型
 ├── src/
 │   ├── app/                # Next.js App Router
-│   │   ├── (public)/       # 公开页面（首页、博客、标签、搜索）
-│   │   ├── (auth)/         # 认证页面（登录、注册）
-│   │   ├── dashboard/      # 管理后台
+│   │   ├── (public)/       # 社区首页、帖子、标签、搜索
+│   │   ├── (auth)/         # 登录、注册、找回密码
+│   │   ├── dashboard/      # 工作台 + 管理后台
 │   │   └── api/            # API 路由
-│   │       ├── auth/       # 认证 API
-│   │       ├── posts/      # 文章 API
+│   │       ├── auth/       # 认证 (NextAuth + 密码重置)
+│   │       ├── admin/      # 超级管理员 (用户管理)
+│   │       ├── posts/      # 帖子 API
 │   │       ├── comments/   # 评论 API
 │   │       ├── tags/       # 标签 API
 │   │       └── search/     # 搜索 API
