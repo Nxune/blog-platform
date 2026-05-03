@@ -8,6 +8,10 @@ export default function DashboardSettingsPage() {
   const { user } = useAuth();
   const { update } = useSession();
   const [name, setName] = useState(user?.name ?? "");
+  const [username, setUsername] = useState(user?.username ?? "");
+  const [bio, setBio] = useState(user?.bio ?? "");
+  const [website, setWebsite] = useState(user?.website ?? "");
+  const [location, setLocation] = useState(user?.location ?? "");
 
   // Email change
   const [newEmail, setNewEmail] = useState("");
@@ -26,16 +30,16 @@ export default function DashboardSettingsPage() {
     setTimeout(() => setMessage(null), 3000);
   };
 
-  const handleSaveName = async () => {
+  const handleSaveProfile = async () => {
     setLoading("name");
     try {
       const res = await fetch("/api/auth/profile", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name }),
+        body: JSON.stringify({ name, username, bio, website, location }),
       });
       if (res.ok) {
-        showMessage("success", "用户名已更新");
+        showMessage("success", "个人资料已更新");
         await update({ name });
       } else {
         const data = await res.json();

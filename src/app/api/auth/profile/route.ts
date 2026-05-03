@@ -16,10 +16,13 @@ export async function GET() {
     select: {
       id: true,
       name: true,
+      username: true,
       email: true,
       image: true,
       role: true,
       bio: true,
+      website: true,
+      location: true,
       createdAt: true,
     },
   });
@@ -114,25 +117,43 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ success: true, message: "邮箱已更新" });
   }
 
-  // Default: update profile (name, bio)
-  const { name, bio } = data;
+  // Default: update profile (name, bio, website, location, username)
+  const { name, bio, website, location, username } = data;
   if (name !== undefined && (typeof name !== "string" || name.trim().length < 1 || name.length > 50)) {
     return NextResponse.json({ error: "用户名长度需在 1-50 字符之间" }, { status: 400 });
   }
   if (bio !== undefined && (typeof bio !== "string" || bio.length > 500)) {
     return NextResponse.json({ error: "个人简介不能超过 500 字符" }, { status: 400 });
   }
+  if (website !== undefined && typeof website !== "string") {
+    return NextResponse.json({ error: "个人网站格式无效" }, { status: 400 });
+  }
+  if (location !== undefined && typeof location !== "string") {
+    return NextResponse.json({ error: "所在地格式无效" }, { status: 400 });
+  }
+  if (username !== undefined) {
+    if (typeof username !== "string" || username.length < 2 || username.length > 30 || !/^[a-zA-Z0-9_-]+$/.test(username)) {
+      return NextResponse.json({ error: "用户名仅允许 2-30 个字母/数字/下划线/连字符" }, { status: 400 });
+    }
+    const existing = await prisma.user.findUnique({ where: { username } });
+    if (existing && existing.id !== session.user.id) {
+      return NextResponse.json({ error: "该用户名已被使用" }, { status: 409 });
+    }
+  }
 
   const user = await prisma.user.update({
     where: { id: session.user.id },
-    data: { name, bio },
+    data: { name, bio, website, location, username },
     select: {
       id: true,
       name: true,
+      username: true,
       email: true,
       image: true,
       role: true,
       bio: true,
+      website: true,
+      location: true,
       createdAt: true,
     },
   });
