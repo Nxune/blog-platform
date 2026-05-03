@@ -1,5 +1,15 @@
-// @vitest-environment node
+// @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+// Mock next-auth/react
+vi.mock('next-auth/react', () => ({
+  useSession: vi.fn(() => ({
+    data: { user: { id: 'test-user', name: 'Test', email: 'test@test.com', role: 'USER' } },
+    status: 'authenticated',
+  })),
+  signIn: vi.fn(),
+  signOut: vi.fn(),
+}));
 
 // Mock Next.js redirect
 const NEXT_REDIRECT = 'NEXT_REDIRECT';
@@ -7,8 +17,11 @@ const mockRedirect = vi.fn(() => {
   throw new Error(NEXT_REDIRECT);
 });
 
+const mockRouter = { push: vi.fn(), refresh: vi.fn(), back: vi.fn() };
 vi.mock('next/navigation', () => ({
   redirect: mockRedirect,
+  useRouter: () => mockRouter,
+  usePathname: () => '/dashboard/posts',
 }));
 
 vi.mock('@/lib/auth', () => ({

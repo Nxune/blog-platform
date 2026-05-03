@@ -7,6 +7,7 @@ vi.mock('@/lib/prisma', () => ({
     user: {
       findUnique: vi.fn(),
       create: vi.fn(),
+      count: vi.fn(),
     },
   },
 }));
@@ -65,6 +66,7 @@ describe('POST /api/auth/register', () => {
 
   it('应成功注册新用户并返回 201', async () => {
     vi.mocked(prisma.user.findUnique).mockResolvedValue(null);
+    vi.mocked(prisma.user.count).mockResolvedValue(1); // existing users, so new user gets USER role
     vi.mocked(hash).mockResolvedValue('$2a$12$hashedpassword' as never);
     vi.mocked(prisma.user.create).mockResolvedValue({ id: 'new-user' } as any);
 
@@ -129,6 +131,7 @@ describe('POST /api/auth/register', () => {
 
   it('应使用 bcrypt 加密密码', async () => {
     vi.mocked(prisma.user.findUnique).mockResolvedValue(null);
+    vi.mocked(prisma.user.count).mockResolvedValue(1);
     vi.mocked(hash).mockResolvedValue('$2a$12$hashed' as never);
     vi.mocked(prisma.user.create).mockResolvedValue({ id: 'new' } as any);
 
@@ -143,6 +146,7 @@ describe('POST /api/auth/register', () => {
 
   it('新用户角色默认为 USER', async () => {
     vi.mocked(prisma.user.findUnique).mockResolvedValue(null);
+    vi.mocked(prisma.user.count).mockResolvedValue(3);
     vi.mocked(hash).mockResolvedValue('$2a$12$hashed' as never);
     vi.mocked(prisma.user.create).mockResolvedValue({ id: 'new' } as any);
 
@@ -181,6 +185,7 @@ describe('POST /api/auth/register', () => {
 
   it('已登录用户不应受影响（register 是公开路由）', async () => {
     vi.mocked(prisma.user.findUnique).mockResolvedValue(null);
+    vi.mocked(prisma.user.count).mockResolvedValue(5);
     vi.mocked(hash).mockResolvedValue('$2a$12$hashed' as never);
     vi.mocked(prisma.user.create).mockResolvedValue({ id: 'new' } as any);
 
@@ -195,6 +200,7 @@ describe('POST /api/auth/register', () => {
 
   it('create 失败应返回 500', async () => {
     vi.mocked(prisma.user.findUnique).mockResolvedValue(null);
+    vi.mocked(prisma.user.count).mockResolvedValue(1);
     vi.mocked(hash).mockResolvedValue('$2a$12$hashed' as never);
     vi.mocked(prisma.user.create).mockRejectedValue(new Error('Create failed'));
 
@@ -229,6 +235,7 @@ describe('POST /api/auth/register', () => {
 
   it('应接受长用户名注册（路由不验证长度）', async () => {
     vi.mocked(prisma.user.findUnique).mockResolvedValue(null);
+    vi.mocked(prisma.user.count).mockResolvedValue(1);
     vi.mocked(hash).mockResolvedValue('$2a$12$hashed' as never);
     vi.mocked(prisma.user.create).mockResolvedValue({ id: 'new' } as any);
 
@@ -243,6 +250,7 @@ describe('POST /api/auth/register', () => {
 
   it('应接受 Unicode 用户名', async () => {
     vi.mocked(prisma.user.findUnique).mockResolvedValue(null);
+    vi.mocked(prisma.user.count).mockResolvedValue(1);
     vi.mocked(hash).mockResolvedValue('$2a$12$hashed' as never);
     vi.mocked(prisma.user.create).mockResolvedValue({ id: 'new' } as any);
 
