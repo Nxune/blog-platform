@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireSuperAdmin, getUserId } from "@/lib/auth-helpers";
-import bcrypt from "bcryptjs";
+import { compare } from "bcryptjs";
 import { logAuditAction } from "@/services/audit.service";
 
 export async function POST(request: Request) {
@@ -28,7 +28,7 @@ export async function POST(request: Request) {
     if (!admin?.password) {
       return NextResponse.json({ error: "验证失败" }, { status: 400 });
     }
-    const valid = await bcrypt.compare(password, admin.password);
+    const valid = await compare(password, admin.password);
     if (!valid) {
       return NextResponse.json({ error: "密码错误" }, { status: 400 });
     }

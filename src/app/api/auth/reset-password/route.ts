@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import bcrypt from "bcryptjs";
+import { hash } from "bcryptjs";
 
 export async function POST(request: Request) {
   try {
@@ -39,7 +39,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const hashedPassword = await bcrypt.hash(password, 12);
+    const hashedPassword = await hash(password, 12);
 
     await prisma.$transaction([
       prisma.user.update({
