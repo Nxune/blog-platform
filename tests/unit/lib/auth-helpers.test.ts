@@ -7,7 +7,7 @@ vi.mock('@/lib/auth', () => ({
 
 import { auth } from '@/lib/auth';
 
-const { requireAuth, requireAdmin } = await import('@/lib/auth-helpers');
+const { requireAuth, requireAdmin, requireOwner } = await import('@/lib/auth-helpers');
 
 const mockSession = {
   user: { id: 'user-1', name: 'Test', email: 'test@test.com', role: 'USER' },
@@ -79,5 +79,41 @@ describe('requireAdmin', () => {
     const result = await requireAdmin();
     expect(result.user.id).toBe('admin-1');
     expect(result.user.role).toBe('ADMIN');
+  });
+});
+
+describe('requireOwner', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('应允许资源所有者访问', async () => {
+    vi.mocked(auth).mockResolvedValue(mockSession as any);
+    const result = await requireOwner('user-1', '文章');
+    expect(result.user.id).toBe('user-1');
+  });
+
+  it('应允许管理员访问任何资源', async () => {
+    vi.mocked(auth).mockResolvedValue(mockAdminSession as any);
+    const result = await requireOwner('user-2', '文章');
+    expect(result.user.role).toBe('ADMIN');
+  });
+
+  it('应拒绝非所有者访问并返回有意义的错误消息', async () => {
+    vi.mocked(auth).mockResolvedValue(mockSession as any);
+    await expect(requireOwner('user-2', '文章')).rejects.toThrow('您没有权限操作此文章');
+  });
+
+  it('应拒绝非所有者访问并默认使用"资源"作为资源名', async () => {
+    vi.mocked(auth).mockResolvedValue(mockSession as any);
+    await expect(requireOwner('user-2')).rejects.toThrow('您没有权限操作此资源');
+  });
+
+  it('应在未认证时抛出 UNAUTHORIZED', async () => {
+    vi.mocked(auth).mockResolvedValue(null);
+    await expect(requireOwner('user-1')).rejects.toThrow('UNAUTHORIZED');
+  });
+
+  it('应在 session 无 user 时抛出 UNAUTHORIZED', async () => {
+    vi.mocked(auth).mockResolvedValue({} as any);
+    await expect(requireOwner('user-1')).rejects.toThrow('UNAUTHORIZED');
   });
 });
