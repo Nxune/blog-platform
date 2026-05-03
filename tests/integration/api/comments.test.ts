@@ -1,26 +1,213 @@
 // @vitest-environment node
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-describe('POST /posts/:postId/comments', () => {
-  it('应成功发表评论并返回 201', async () => { expect(true).toBe(true); });
-  it('应拒绝未认证请求并返回 401', async () => { expect(true).toBe(true); });
-  it('应拒绝空内容并返回 422', async () => { expect(true).toBe(true); });
-  it('应拒绝超长内容并返回 422', async () => { expect(true).toBe(true); });
-  it('应成功回复已存在的评论', async () => { expect(true).toBe(true); });
-  it('应拒绝回复不存在的评论并返回 404', async () => { expect(true).toBe(true); });
-  it('应拒绝为不存在文章添加评论并返回 404', async () => { expect(true).toBe(true); });
-  it('应拒绝 XSS 注入内容', async () => { expect(true).toBe(true); });
+vi.mock('@/services/comment.service', () => ({
+  getCommentsByPostSlug: vi.fn(),
+  createComment: vi.fn(),
+  deleteComment: vi.fn(),
+  listAllComments: vi.fn(),
+  moderateComment: vi.fn(),
+}));
+
+vi.mock('@/lib/auth-helpers', () => ({
+  requireAuth: vi.fn(),
+  requireAdmin: vi.fn(),
+}));
+
+vi.mock('@/lib/validations', () => ({
+  commentSchema: {
+    safeParse: vi.fn((data) => {
+      if (!data.content) return { success: false };
+      if (data.content.length > 5000) return { success: false };
+      return { success: true, data };
+    }),
+  },
+}));
+
+import { getCommentsByPostSlug, createComment, deleteComment, listAllComments } from '@/services/comment.service';
+import { requireAuth, requireAdmin } from '@/lib/auth-helpers';
+
+const mockComment = {
+  id: 'comment-1',
+  content: '测试评论',
+  createdAt: new Date(),
+  updatedAt: new Date(),
+  authorId: 'user-1',
+  author: { id: 'user-1', name: '用户', email: 'user@test.com', image: null },
+  postId: 'post-1',
+  parentId: null,
+  status: 'APPROVED',
+};
+
+async function getPostCommentsHandler() {
+  const { GET } = await import('@/app/api/posts/[slug]/comments/route');
+  return GET;
+}
+
+async function postCommentHandler() {
+  const { POST } = await import('@/app/api/posts/[slug]/comments/route');
+  return POST;
+}
+
+async function getAllCommentsHandler() {
+  const { GET } = await import('@/app/api/comments/route');
+  return GET;
+}
+
+async function deleteCommentHandler() {
+  const { DELETE } = await import('@/app/api/comments/[id]/route');
+  return DELETE;
+}
+
+describe('GET /api/posts/[slug]/comments', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('应返回文章评论列表', async () => {
+    vi.mocked(getCommentsByPostSlug).mockResolvedValue([mockComment, { ...mockComment, id: 'comment-2' }] as any);
+    const handler = await getPostCommentsHandler();
+    const res = await handler(new Request('http://localhost:3000/api/posts/test-post/comments'), {
+      params: Promise.resolve({ slug: 'test-post' }),
+    } as any);
+    const data = await res.json();
+    expect(res.status).toBe(200);
+    expect(data.comments).toHaveLength(2);
+  });
+
+  it('应返回 404 给不存在的文章', async () => {
+    vi.mocked(getCommentsByPostSlug).mockRejectedValue(new Error('NOT_FOUND'));
+    const handler = await getPostCommentsHandler();
+    const res = await handler(new Request('http://localhost:3000/api/posts/nonexistent/comments'), {
+      params: Promise.resolve({ slug: 'nonexistent' }),
+    } as any);
+    expect(res.status).toBe(404);
+  });
 });
 
-describe('GET /posts/:id/comments', () => {
-  it('应返回文章评论列表（分页）', async () => { expect(true).toBe(true); });
-  it('应正确嵌套回复结构', async () => { expect(true).toBe(true); });
-  it('应处理无评论的文章返回空数组', async () => { expect(true).toBe(true); });
+describe('POST /api/posts/[slug]/comments', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('应成功发表评论并返回 201', async () => {
+    vi.mocked(requireAuth).mockResolvedValue({ user: { id: 'user-1' } } as any);
+    vi.mocked(createComment).mockResolvedValue(mockComment as any);
+
+    const handler = await postCommentHandler();
+    const res = await handler(new Request('http://localhost:3000/api/posts/test-post/comments', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content: '测试评论' }),
+    }), { params: Promise.resolve({ slug: 'test-post' }) } as any);
+    expect(res.status).toBe(201);
+  });
+
+  it('应拒绝未认证请求并返回 401', async () => {
+    vi.mocked(requireAuth).mockRejectedValue(new Error('UNAUTHORIZED'));
+
+    const handler = await postCommentHandler();
+    const res = await handler(new Request('http://localhost:3000/api/posts/test-post/comments', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content: '评论' }),
+    }), { params: Promise.resolve({ slug: 'test-post' }) } as any);
+    expect(res.status).toBe(401);
+  });
+
+  it('应拒绝空评论并返回 400', async () => {
+    vi.mocked(requireAuth).mockResolvedValue({ user: { id: 'user-1' } } as any);
+
+    const handler = await postCommentHandler();
+    const res = await handler(new Request('http://localhost:3000/api/posts/test-post/comments', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content: '' }),
+    }), { params: Promise.resolve({ slug: 'test-post' }) } as any);
+    expect(res.status).toBe(400);
+  });
+
+  it('应成功回复已存在的评论', async () => {
+    vi.mocked(requireAuth).mockResolvedValue({ user: { id: 'user-1' } } as any);
+    vi.mocked(createComment).mockResolvedValue({ ...mockComment, parentId: 'parent-1' } as any);
+
+    const handler = await postCommentHandler();
+    const res = await handler(new Request('http://localhost:3000/api/posts/test-post/comments', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content: '回复内容', parentId: 'parent-1' }),
+    }), { params: Promise.resolve({ slug: 'test-post' }) } as any);
+    expect(res.status).toBe(201);
+    expect(createComment).toHaveBeenCalledWith(expect.objectContaining({ parentId: 'parent-1' }));
+  });
+
+  it('应拒绝为不存在文章添加评论并返回 404', async () => {
+    vi.mocked(requireAuth).mockResolvedValue({ user: { id: 'user-1' } } as any);
+    vi.mocked(createComment).mockRejectedValue(new Error('POST_NOT_FOUND'));
+
+    const handler = await postCommentHandler();
+    const res = await handler(new Request('http://localhost:3000/api/posts/nonexistent/comments', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content: '评论' }),
+    }), { params: Promise.resolve({ slug: 'nonexistent' }) } as any);
+    expect(res.status).toBe(404);
+  });
+
+  it('应拒绝回复不存在的父评论并返回 400', async () => {
+    vi.mocked(requireAuth).mockResolvedValue({ user: { id: 'user-1' } } as any);
+    vi.mocked(createComment).mockRejectedValue(new Error('PARENT_NOT_FOUND'));
+
+    const handler = await postCommentHandler();
+    const res = await handler(new Request('http://localhost:3000/api/posts/test-post/comments', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content: '回复', parentId: 'bad-parent' }),
+    }), { params: Promise.resolve({ slug: 'test-post' }) } as any);
+    expect(res.status).toBe(400);
+  });
 });
 
-describe('DELETE /comments/:id', () => {
-  it('应允许作者删除自己的评论并返回 204', async () => { expect(true).toBe(true); });
-  it('应拒绝非作者删除并返回 403', async () => { expect(true).toBe(true); });
-  it('应允许管理员删除任意评论', async () => { expect(true).toBe(true); });
-  it('应返回 404 给不存在的评论', async () => { expect(true).toBe(true); });
+describe('GET /api/comments（管理员）', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('应返回所有评论列表', async () => {
+    vi.mocked(requireAdmin).mockResolvedValue({ user: { id: 'admin-1', role: 'ADMIN' } } as any);
+    vi.mocked(listAllComments).mockResolvedValue({
+      comments: [mockComment], total: 1, page: 1, pageSize: 20, totalPages: 1,
+    });
+
+    const handler = await getAllCommentsHandler();
+    const res = await handler(new Request('http://localhost:3000/api/comments'));
+    expect(res.status).toBe(200);
+  });
+
+  it('应拒绝非管理员并返回 403', async () => {
+    vi.mocked(requireAdmin).mockRejectedValue(new Error('FORBIDDEN'));
+
+    const handler = await getAllCommentsHandler();
+    const res = await handler(new Request('http://localhost:3000/api/comments'));
+    expect(res.status).toBe(403);
+  });
+});
+
+describe('DELETE /api/comments/[id]（管理员）', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('应成功删除评论', async () => {
+    vi.mocked(requireAdmin).mockResolvedValue({ user: { id: 'admin-1' } } as any);
+    vi.mocked(deleteComment).mockResolvedValue(undefined as any);
+
+    const handler = await deleteCommentHandler();
+    const res = await handler(new Request('http://localhost:3000/api/comments/comment-1'), {
+      params: Promise.resolve({ id: 'comment-1' }),
+    } as any);
+    expect(res.status).toBe(200);
+  });
+
+  it('应拒绝非管理员并返回 403', async () => {
+    vi.mocked(requireAdmin).mockRejectedValue(new Error('FORBIDDEN'));
+
+    const handler = await deleteCommentHandler();
+    const res = await handler(new Request('http://localhost:3000/api/comments/comment-1'), {
+      params: Promise.resolve({ id: 'comment-1' }),
+    } as any);
+    expect(res.status).toBe(403);
+  });
 });
