@@ -133,6 +133,24 @@ describe('GET /api/posts', () => {
     await handler(new Request('http://localhost:3000/api/posts?published=true'));
     expect(listPosts).toHaveBeenCalledWith(expect.objectContaining({ published: true }));
   });
+
+  it('应传递自定义 pageSize', async () => {
+    vi.mocked(listPosts).mockResolvedValue({
+      posts: [], total: 0, page: 1, pageSize: 50, totalPages: 0,
+    });
+    const handler = await getHandler();
+    await handler(new Request('http://localhost:3000/api/posts?pageSize=50'));
+    expect(listPosts).toHaveBeenCalledWith(expect.objectContaining({ pageSize: 50 }));
+  });
+
+  it('默认使用第一页和每页 10 条', async () => {
+    vi.mocked(listPosts).mockResolvedValue({
+      posts: [], total: 0, page: 1, pageSize: 10, totalPages: 0,
+    });
+    const handler = await getHandler();
+    await handler(new Request('http://localhost:3000/api/posts'));
+    expect(listPosts).toHaveBeenCalledWith(expect.objectContaining({ page: 1, pageSize: 10 }));
+  });
 });
 
 describe('POST /api/posts', () => {
@@ -188,6 +206,34 @@ describe('POST /api/posts', () => {
       body: JSON.stringify({ title: '标题', content: '' }),
     }));
     expect(res.status).toBe(400);
+  });
+
+  it('应成功创建带标签的文章', async () => {
+    vi.mocked(requireAdmin).mockResolvedValue({ user: { id: 'admin-1' } } as any);
+    vi.mocked(requireAuth).mockResolvedValue({ user: { id: 'admin-1' } } as any);
+    vi.mocked(createPost).mockResolvedValue({ ...mockPost, tags: [{ id: 't1', name: 'React' }] } as any);
+
+    const handler = await postHandler();
+    const res = await handler(new Request('http://localhost:3000/api/posts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: '新文章', content: '# 内容', tags: ['React'] }),
+    }));
+    expect(res.status).toBe(201);
+  });
+
+  it('创建文章失败应返回 500', async () => {
+    vi.mocked(requireAdmin).mockResolvedValue({ user: { id: 'admin-1' } } as any);
+    vi.mocked(requireAuth).mockResolvedValue({ user: { id: 'admin-1' } } as any);
+    vi.mocked(createPost).mockRejectedValue(new Error('DB error'));
+
+    const handler = await postHandler();
+    const res = await handler(new Request('http://localhost:3000/api/posts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: '新文章', content: '# 内容' }),
+    }));
+    expect(res.status).toBe(500);
   });
 });
 
@@ -277,6 +323,20 @@ describe('PATCH /api/posts/[slug]', () => {
     const data = await res.json();
     expect(data.excerpt).toBe('新摘要');
   });
+
+  it('更新文章失败应返回 500', async () => {
+    vi.mocked(requireAdmin).mockResolvedValue({ user: { id: 'admin-1' } } as any);
+    vi.mocked(getPostBySlug).mockResolvedValue(mockPost as any);
+    vi.mocked(updatePost).mockRejectedValue(new Error('DB error'));
+
+    const { PATCH } = await getBySlugHandler();
+    const res = await PATCH(new Request('http://localhost:3000/api/posts/test-post', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: '更新' }),
+    }), { params: Promise.resolve({ slug: 'test-post' }) } as any);
+    expect(res.status).toBe(500);
+  });
 });
 
 describe('DELETE /api/posts/[slug]', () => {
@@ -311,5 +371,17 @@ describe('DELETE /api/posts/[slug]', () => {
       params: Promise.resolve({ slug: 'test-post' }),
     } as any);
     expect(res.status).toBe(404);
+  });
+
+  it('删除文章失败应返回 500', async () => {
+    vi.mocked(requireAdmin).mockResolvedValue({ user: { id: 'admin-1' } } as any);
+    vi.mocked(getPostBySlug).mockResolvedValue(mockPost as any);
+    vi.mocked(deletePost).mockRejectedValue(new Error('DB error'));
+
+    const { DELETE } = await getBySlugHandler();
+    const res = await DELETE(new Request('http://localhost:3000/api/posts/test-post'), {
+      params: Promise.resolve({ slug: 'test-post' }),
+    } as any);
+    expect(res.status).toBe(500);
   });
 });

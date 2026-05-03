@@ -118,4 +118,32 @@ describe('GET /api/admin/stats', () => {
     expect(prisma.user.count).toHaveBeenCalledTimes(1);
     expect(prisma.tag.count).toHaveBeenCalledTimes(1);
   });
+
+  it('数据库错误应返回 500', async () => {
+    vi.mocked(requireAdmin).mockResolvedValue({ user: { id: 'admin-1', role: 'ADMIN' } } as any);
+    vi.mocked(prisma.post.count).mockRejectedValue(new Error('DB error'));
+
+    const handler = await statsHandler();
+    const res = await handler();
+    expect(res.status).toBe(500);
+  });
+
+  it('应正确查询已发布和草稿文章计数', async () => {
+    vi.mocked(requireAdmin).mockResolvedValue({ user: { id: 'admin-1', role: 'ADMIN' } } as any);
+    vi.mocked(prisma.post.count)
+      .mockResolvedValueOnce(10)
+      .mockResolvedValueOnce(7)
+      .mockResolvedValueOnce(3);
+    vi.mocked(prisma.comment.count).mockResolvedValue(0);
+    vi.mocked(prisma.user.count).mockResolvedValue(0);
+    vi.mocked(prisma.tag.count).mockResolvedValue(0);
+
+    const handler = await statsHandler();
+    const data = await (await handler()).json();
+
+    expect(prisma.post.count).toHaveBeenNthCalledWith(2, { where: { published: true } });
+    expect(prisma.post.count).toHaveBeenNthCalledWith(3, { where: { published: false } });
+    expect(data.posts.published).toBe(7);
+    expect(data.posts.draft).toBe(3);
+  });
 });

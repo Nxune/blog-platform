@@ -86,6 +86,16 @@ describe('GET /api/posts/[slug]/comments', () => {
     } as any);
     expect(res.status).toBe(404);
   });
+
+  it('无评论时应返回空数组', async () => {
+    vi.mocked(getCommentsByPostSlug).mockResolvedValue([]);
+    const handler = await getPostCommentsHandler();
+    const res = await handler(new Request('http://localhost:3000/api/posts/empty-post/comments'), {
+      params: Promise.resolve({ slug: 'empty-post' }),
+    } as any);
+    const data = await res.json();
+    expect(data.comments).toEqual([]);
+  });
 });
 
 describe('POST /api/posts/[slug]/comments', () => {
@@ -100,6 +110,19 @@ describe('POST /api/posts/[slug]/comments', () => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ content: '测试评论' }),
+    }), { params: Promise.resolve({ slug: 'test-post' }) } as any);
+    expect(res.status).toBe(201);
+  });
+
+  it('应成功发表含特殊字符的评论', async () => {
+    vi.mocked(requireAuth).mockResolvedValue({ user: { id: 'user-1' } } as any);
+    vi.mocked(createComment).mockResolvedValue({ ...mockComment, content: '🔥 ❤️ 👨‍👩‍👧‍👦 & <test>' } as any);
+
+    const handler = await postCommentHandler();
+    const res = await handler(new Request('http://localhost:3000/api/posts/test-post/comments', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content: '🔥 ❤️ 👨‍👩‍👧‍👦 & <test>' }),
     }), { params: Promise.resolve({ slug: 'test-post' }) } as any);
     expect(res.status).toBe(201);
   });
@@ -224,6 +247,15 @@ describe('GET /api/comments（管理员）', () => {
     await handler(new Request('http://localhost:3000/api/comments?status=PENDING'));
     expect(listAllComments).toHaveBeenCalledWith(expect.objectContaining({ status: 'PENDING' }));
   });
+
+  it('获取评论列表失败应返回 500', async () => {
+    vi.mocked(requireAdmin).mockResolvedValue({ user: { id: 'admin-1', role: 'ADMIN' } } as any);
+    vi.mocked(listAllComments).mockRejectedValue(new Error('DB error'));
+
+    const handler = await getAllCommentsHandler();
+    const res = await handler(new Request('http://localhost:3000/api/comments'));
+    expect(res.status).toBe(500);
+  });
 });
 
 describe('DELETE /api/comments/[id]（管理员）', () => {
@@ -248,6 +280,17 @@ describe('DELETE /api/comments/[id]（管理员）', () => {
       params: Promise.resolve({ id: 'comment-1' }),
     } as any);
     expect(res.status).toBe(403);
+  });
+
+  it('删除评论失败应返回 500', async () => {
+    vi.mocked(requireAdmin).mockResolvedValue({ user: { id: 'admin-1' } } as any);
+    vi.mocked(deleteComment).mockRejectedValue(new Error('DB error'));
+
+    const handler = await deleteCommentHandler();
+    const res = await handler(new Request('http://localhost:3000/api/comments/comment-1'), {
+      params: Promise.resolve({ id: 'comment-1' }),
+    } as any);
+    expect(res.status).toBe(500);
   });
 });
 
@@ -306,5 +349,18 @@ describe('PATCH /api/comments/[id]/status（审核评论）', () => {
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(data.status).toBe('SPAM');
+  });
+
+  it('审核评论失败应返回 500', async () => {
+    vi.mocked(requireAdmin).mockResolvedValue({ user: { id: 'admin-1' } } as any);
+    vi.mocked(moderateComment).mockRejectedValue(new Error('DB error'));
+
+    const handler = await moderateCommentHandler();
+    const res = await handler(new Request('http://localhost:3000/api/comments/comment-1/status', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'APPROVED' }),
+    }), { params: Promise.resolve({ id: 'comment-1' }) } as any);
+    expect(res.status).toBe(500);
   });
 });

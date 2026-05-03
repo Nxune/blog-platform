@@ -111,4 +111,20 @@ describe('GET /api/search', () => {
     await handler(new Request('http://localhost:3000/api/search?q=%E6%90%9C%E7%B4%A2'));
     expect(listPosts).toHaveBeenCalledWith(expect.objectContaining({ search: '搜索' }));
   });
+
+  it('缺少 q 参数应返回空结果', async () => {
+    const handler = await searchHandler();
+    const res = await handler(new Request('http://localhost:3000/api/search'));
+    const data = await res.json();
+    expect(data.posts).toEqual([]);
+    expect(data.total).toBe(0);
+    expect(listPosts).not.toHaveBeenCalled();
+  });
+
+  it('搜索失败应返回 500', async () => {
+    vi.mocked(listPosts).mockRejectedValue(new Error('DB error'));
+    const handler = await searchHandler();
+    const res = await handler(new Request('http://localhost:3000/api/search?q=react'));
+    expect(res.status).toBe(500);
+  });
 });

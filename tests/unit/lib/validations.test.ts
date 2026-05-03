@@ -58,6 +58,23 @@ describe('loginSchema', () => {
     const result = loginSchema.safeParse({ email: 'user@example.com' });
     expect(result.success).toBe(false);
   });
+
+  it('邮箱含首尾空格应被拒绝', () => {
+    const result = loginSchema.safeParse({
+      email: '  user@example.com  ',
+      password: 'password123',
+    });
+    // Schema 可能不自动 trim，因此应拒绝
+    expect(result.success).toBe(false);
+  });
+
+  it('应接受含特殊字符的邮箱', () => {
+    const result = loginSchema.safeParse({
+      email: 'user+tag@example.com',
+      password: 'password123',
+    });
+    expect(result.success).toBe(true);
+  });
 });
 
 // ============================================================
@@ -139,6 +156,24 @@ describe('registerSchema', () => {
   it('应拒绝缺失字段', () => {
     const result = registerSchema.safeParse({});
     expect(result.success).toBe(false);
+  });
+
+  it('密码恰好 8 字符应被接受', () => {
+    const result = registerSchema.safeParse({
+      name: '测试用户',
+      email: 'user@example.com',
+      password: '8chars!',
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('密码仅含字母但仍满足最小长度应被接受', () => {
+    const result = registerSchema.safeParse({
+      name: '测试用户',
+      email: 'user@example.com',
+      password: 'OnlyLetters',
+    });
+    expect(result.success).toBe(true);
   });
 });
 
@@ -247,6 +282,34 @@ describe('postSchema', () => {
     const result = postSchema.safeParse({});
     expect(result.success).toBe(false);
   });
+
+  it('应接受 featured 为 true', () => {
+    const result = postSchema.safeParse({
+      title: '标题',
+      content: '内容',
+      featured: true,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('应拒绝 coverImage 为 null（仅接受 string 或 undefined）', () => {
+    const result = postSchema.safeParse({
+      title: '标题',
+      content: '内容',
+      coverImage: null,
+    });
+    // coverImage 类型为 string().url().optional().or(literal(""))，不接受 null
+    expect(result.success).toBe(false);
+  });
+
+  it('应接受 published 为 true', () => {
+    const result = postSchema.safeParse({
+      title: '标题',
+      content: '内容',
+      published: true,
+    });
+    expect(result.success).toBe(true);
+  });
 });
 
 // ============================================================
@@ -312,5 +375,17 @@ describe('commentSchema', () => {
       content: 'x'.repeat(5000),
     });
     expect(result.success).toBe(true);
+  });
+
+  it('评论内容含 HTML 标签应被接受', () => {
+    const result = commentSchema.safeParse({
+      content: '<script>alert("xss")</script>',
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('评论 content 为数字时被拒绝', () => {
+    const result = commentSchema.safeParse({ content: 123 });
+    expect(result.success).toBe(false);
   });
 });

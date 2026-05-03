@@ -13,7 +13,7 @@ export function useAuth() {
         name: session.user.name ?? "",
         email: session.user.email ?? "",
         image: session.user.image ?? null,
-        role: (rawUser?.role as UserProfile["role"]) ?? "READER",
+        role: (rawUser?.role as UserProfile["role"]) ?? "USER",
         bio: null,
         createdAt: new Date(),
       }

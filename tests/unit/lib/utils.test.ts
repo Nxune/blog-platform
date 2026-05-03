@@ -21,6 +21,21 @@ describe('formatDate', () => {
     const result = formatDate(date);
     expect(result).toContain('31日');
   });
+
+  it('应处理 Date 字符串', () => {
+    expect(formatDate('2026-05-03')).toContain('2026');
+  });
+
+  it('应处理时间戳数字', () => {
+    const ts = new Date('2026-05-03').getTime();
+    expect(formatDate(ts)).toContain('2026');
+  });
+
+  it('应处理跨年日期', () => {
+    const result = formatDate(new Date('2025-12-31'));
+    expect(result).toContain('2025');
+    expect(result).toContain('12月');
+  });
 });
 
 describe('slugify', () => {

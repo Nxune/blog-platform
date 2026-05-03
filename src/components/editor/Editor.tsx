@@ -1,6 +1,9 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState } from "react";
+import { useEditor, EditorContent } from "@tiptap/react";
+import StarterKit from "@tiptap/starter-kit";
+import Placeholder from "@tiptap/extension-placeholder";
 import { EditorToolbar } from "./EditorToolbar";
 import { EditorPreview } from "./EditorPreview";
 
@@ -11,20 +14,31 @@ interface EditorProps {
 }
 
 export function Editor({ initialContent = "", onChange, placeholder }: EditorProps) {
-  const [content, setContent] = useState(initialContent);
   const [isPreview, setIsPreview] = useState(false);
 
-  const handleChange = useCallback(
-    (value: string) => {
-      setContent(value);
-      onChange?.(value);
+  const editor = useEditor({
+    extensions: [
+      StarterKit,
+      Placeholder.configure({
+        placeholder: placeholder ?? "开始写作...",
+      }),
+    ],
+    content: initialContent,
+    onUpdate: ({ editor: ed }) => {
+      onChange?.(ed.getHTML());
     },
-    [onChange]
-  );
+    editorProps: {
+      attributes: {
+        class: "prose prose-sm max-w-none p-4 focus:outline-none min-h-[360px]",
+        placeholder: placeholder ?? "开始写作...",
+      },
+    },
+  });
 
   return (
     <div className="min-h-[400px] rounded-lg border">
       <div className="flex items-center justify-between border-b bg-muted/50 px-2">
+        <EditorToolbar editor={editor} />
         <div className="flex gap-1">
           <button
             type="button"
@@ -48,14 +62,9 @@ export function Editor({ initialContent = "", onChange, placeholder }: EditorPro
       </div>
 
       {isPreview ? (
-        <EditorPreview content={content} />
+        <EditorPreview content={editor?.getHTML() ?? ""} />
       ) : (
-        <textarea
-          value={content}
-          onChange={(e) => handleChange(e.target.value)}
-          placeholder={placeholder ?? "开始写作..."}
-          className="min-h-[360px] w-full resize-y border-none p-4 font-mono text-sm outline-none focus:ring-0"
-        />
+        <EditorContent editor={editor} />
       )}
     </div>
   );

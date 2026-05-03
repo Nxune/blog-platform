@@ -226,6 +226,26 @@ describe('POST /api/auth/register', () => {
     }));
     expect(res.status).toBe(400);
   });
+
+  it('注册名超长应返回 400', async () => {
+    const handler = await registerHandler();
+    const res = await handler(new Request('http://localhost:3000/api/auth/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: 'x'.repeat(51), email: 'test@test.com', password: 'Password1!' }),
+    }));
+    expect(res.status).toBe(400);
+  });
+
+  it('缺失 name 字段应返回 400', async () => {
+    const handler = await registerHandler();
+    const res = await handler(new Request('http://localhost:3000/api/auth/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: 'test@test.com', password: 'Password1!' }),
+    }));
+    expect(res.status).toBe(400);
+  });
 });
 
 describe('Auth 模块结构', () => {
