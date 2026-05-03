@@ -1,0 +1,80 @@
+// @vitest-environment node
+import { describe, it, expect } from 'vitest';
+import { formatDate, slugify, truncate } from '@/lib/utils';
+
+describe('formatDate', () => {
+  it('应正确格式化 Date 对象为中文日期格式', () => {
+    const date = new Date('2026-05-03T12:00:00Z');
+    const result = formatDate(date);
+    expect(result).toContain('2026');
+    expect(result).toContain('5月');
+    expect(result).toContain('3日');
+  });
+
+  it('应处理字符串日期', () => {
+    const result = formatDate('2026-05-03');
+    expect(result).toContain('2026');
+  });
+
+  it('应正确处理月末日期', () => {
+    const date = new Date('2026-01-31');
+    const result = formatDate(date);
+    expect(result).toContain('31日');
+  });
+});
+
+describe('slugify', () => {
+  it('应将英文标题转为 slug', () => {
+    expect(slugify('Hello World')).toBe('hello-world');
+  });
+
+  it('应处理特殊字符', () => {
+    expect(slugify('Hello & World!')).toBe('hello-world');
+  });
+
+  it('应去除首尾连字符', () => {
+    expect(slugify('  hello world  ')).toBe('hello-world');
+  });
+
+  it('应处理多个连续空格', () => {
+    expect(slugify('hello   world')).toBe('hello-world');
+  });
+
+  it('应保留中文字符', () => {
+    const result = slugify('你好 World');
+    expect(result).toContain('你好');
+    expect(result).toContain('world');
+  });
+
+  it('应处理空字符串', () => {
+    expect(slugify('')).toBe('');
+  });
+
+  it('应处理只有特殊字符的字符串', () => {
+    expect(slugify('!!!---???')).toBe('');
+  });
+});
+
+describe('truncate', () => {
+  it('应截断超过长度的文本并添加省略号', () => {
+    expect(truncate('Hello World This Is Long', 10)).toBe('Hello...');
+  });
+
+  it('应在单词边界处截断', () => {
+    const result = truncate('Hello World This Is Long', 12);
+    expect(result).toMatch(/\.\.\.$/);
+    expect(result!.length).toBeLessThanOrEqual(15);
+  });
+
+  it('不应截断未超过长度的文本', () => {
+    expect(truncate('Hello', 10)).toBe('Hello');
+  });
+
+  it('应处理恰好等于长度的文本', () => {
+    expect(truncate('1234567890', 10)).toBe('1234567890');
+  });
+
+  it('应处理空字符串', () => {
+    expect(truncate('', 10)).toBe('');
+  });
+});

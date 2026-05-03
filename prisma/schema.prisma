@@ -1,0 +1,118 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum CommentStatus {
+  PENDING
+  APPROVED
+  SPAM
+  DELETED
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String?
+  email     String   @unique
+  password  String?
+  image     String?
+  role      Role     @default(USER)
+  bio       String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  posts    Post[]
+  comments Comment[]
+  accounts Account[]
+  sessions Session[]
+}
+
+model Post {
+  id          String   @id @default(cuid())
+  title       String
+  slug        String   @unique
+  content     String
+  excerpt     String?
+  coverImage  String?
+  published   Boolean  @default(false)
+  featured    Boolean  @default(false)
+  viewCount   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  publishedAt DateTime?
+
+  authorId String
+  author   User   @relation(fields: [authorId], references: [id])
+
+  tags     TagOnPost[]
+  comments Comment[]
+}
+
+model Tag {
+  id   String @id @default(cuid())
+  name String @unique
+  slug String @unique
+
+  posts TagOnPost[]
+}
+
+model TagOnPost {
+  postId String
+  tagId  String
+  post   Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  tag    Tag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([postId, tagId])
+}
+
+model Comment {
+  id        String        @id @default(cuid())
+  content   String
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  authorId String
+  author   User          @relation(fields: [authorId], references: [id])
+
+  postId   String
+  post     Post          @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  parentId  String?
+  parent    Comment?      @relation("CommentReplies", fields: [parentId], references: [id])
+  replies   Comment[]     @relation("CommentReplies")
+
+  status    CommentStatus @default(APPROVED)
+}
+
+model Account {
+  id           String    @id @default(cuid())
+  accountId    String
+  providerId   String
+  userId       String
+  accessToken  String?
+  refreshToken String?
+  idToken      String?
+  expiresAt    DateTime?
+  password     String?
+
+  user         User      @relation(fields: [userId], references: [id])
+
+  @@unique([providerId, accountId])
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  expiresAt DateTime
+  token     String   @unique
+
+  user      User     @relation(fields: [userId], references: [id])
+}
