@@ -28,7 +28,7 @@ export function AuthGuard({ children, adminOnly = false, fallback }: AuthGuardPr
     return null;
   }
 
-  if (adminOnly && user?.role !== "ADMIN") {
+  if (adminOnly && user?.role !== "ADMIN" && user?.role !== "SUPER_ADMIN") {
     return <div className="flex items-center justify-center p-8 text-destructive">无权限访问</div>;
   }
 

@@ -43,7 +43,7 @@ export function useAdmin() {
   const { user, isLoading } = useAuth();
 
   return {
-    isAdmin: user?.role === "ADMIN",
+    isAdmin: user?.role === "ADMIN" || user?.role === "SUPER_ADMIN",
     isLoading,
     user,
   };
