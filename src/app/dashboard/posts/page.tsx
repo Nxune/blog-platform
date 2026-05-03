@@ -1,48 +1,109 @@
+"use client";
+
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
-import { redirect } from "next/navigation";
+import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 
-export const dynamic = "force-dynamic";
+interface Post {
+  id: string;
+  title: string;
+  slug: string;
+  published: boolean;
+  createdAt: string;
+  updatedAt: string;
+  author: { id: string; name: string | null; email: string };
+  _count: { comments: number };
+}
 
-export default async function DashboardPostsPage() {
-  const session = await auth();
-  if (!session?.user) {
-    redirect("/login");
-  }
+export default function DashboardPostsPage() {
+  const { data: session } = useSession();
+  const router = useRouter();
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [error, setError] = useState("");
 
-  const role = (session.user as Record<string, unknown>).role as string;
-  const userId = (session.user as Record<string, unknown>).id as string;
+  const role = (session?.user as Record<string, unknown> | undefined)
+    ?.role as string | undefined;
+  const isSuperAdmin = role === "SUPER_ADMIN";
 
-  const posts = await prisma.post.findMany({
-    where: role === "ADMIN" || role === "SUPER_ADMIN" ? undefined : { authorId: userId },
-    select: {
-      id: true,
-      title: true,
-      slug: true,
-      published: true,
-      createdAt: true,
-      updatedAt: true,
-      author: { select: { name: true, email: true } },
-      _count: { select: { comments: true } },
-    },
-    orderBy: { updatedAt: "desc" },
-    take: 100,
-  });
+  const fetchPosts = useCallback(async () => {
+    setIsLoading(true);
+    setError("");
+    try {
+      const params = new URLSearchParams();
+      if (search) params.set("search", search);
+      const res = await fetch(`/api/dashboard/posts?${params}`);
+      if (res.status === 401) {
+        router.push("/login");
+        return;
+      }
+      if (!res.ok) throw new Error("获取失败");
+      const data = await res.json();
+      setPosts(data.posts ?? []);
+    } catch {
+      setError("获取文章列表失败");
+    } finally {
+      setIsLoading(false);
+    }
+  }, [search, router]);
+
+  useEffect(() => {
+    fetchPosts();
+  }, [fetchPosts]);
+
+  const handleDelete = async (postId: string, title: string) => {
+    if (!confirm(`确定要删除文章「${title}」吗？此操作不可撤销。`)) return;
+    try {
+      const res = await fetch(`/api/dashboard/posts/${postId}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        alert(data.error || "删除失败");
+        return;
+      }
+      fetchPosts();
+    } catch {
+      alert("删除失败");
+    }
+  };
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-4">
         <h1 className="text-2xl font-bold">文章管理</h1>
         <Link
           href="/dashboard/posts/new"
-          className="rounded-lg bg-primary px-4 py-2 text-sm text-primary-foreground hover:opacity-90"
+          className="shrink-0 rounded-lg bg-primary px-4 py-2 text-sm text-primary-foreground hover:opacity-90"
         >
           新建文章
         </Link>
       </div>
 
-      {posts.length === 0 ? (
+      <div className="flex gap-2">
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && fetchPosts()}
+          placeholder={isSuperAdmin ? "搜索标题或作者邮箱..." : "搜索标题..."}
+          className="flex-1 rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary"
+        />
+        <button
+          onClick={fetchPosts}
+          className="rounded-lg border px-4 py-2 text-sm hover:bg-muted"
+        >
+          搜索
+        </button>
+      </div>
+
+      {error && <p className="text-sm text-destructive">{error}</p>}
+
+      {isLoading ? (
+        <p className="py-12 text-center text-muted-foreground">加载中...</p>
+      ) : posts.length === 0 ? (
         <p className="py-12 text-center text-muted-foreground">暂无文章</p>
       ) : (
         <div className="overflow-x-auto rounded-lg border">
@@ -86,7 +147,7 @@ export default async function DashboardPostsPage() {
                     {post._count.comments}
                   </td>
                   <td className="px-4 py-3 text-muted-foreground">
-                    {post.updatedAt.toLocaleDateString("zh-CN")}
+                    {new Date(post.updatedAt).toLocaleDateString("zh-CN")}
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex gap-2">
@@ -102,6 +163,14 @@ export default async function DashboardPostsPage() {
                       >
                         查看
                       </Link>
+                      {isSuperAdmin && (
+                        <button
+                          onClick={() => handleDelete(post.id, post.title)}
+                          className="text-destructive hover:underline"
+                        >
+                          删除
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
