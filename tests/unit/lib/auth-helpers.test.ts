@@ -7,7 +7,7 @@ vi.mock('@/lib/auth', () => ({
 
 import { auth } from '@/lib/auth';
 
-const { requireAuth, requireAdmin, requireOwner } = await import('@/lib/auth-helpers');
+const { requireAuth, requireAdmin, requireSuperAdmin, requireOwner } = await import('@/lib/auth-helpers');
 
 const mockSession = {
   user: { id: 'user-1', name: 'Test', email: 'test@test.com', role: 'USER' },
@@ -16,6 +16,11 @@ const mockSession = {
 
 const mockAdminSession = {
   user: { id: 'admin-1', name: 'Admin', email: 'admin@test.com', role: 'ADMIN' },
+  expires: new Date().toISOString(),
+};
+
+const mockSuperAdminSession = {
+  user: { id: 'super-1', name: 'Super', email: 'super@test.com', role: 'SUPER_ADMIN' },
   expires: new Date().toISOString(),
 };
 
@@ -80,6 +85,53 @@ describe('requireAdmin', () => {
     expect(result.user.id).toBe('admin-1');
     expect(result.user.role).toBe('ADMIN');
   });
+
+  it('应允许 SUPER_ADMIN 通过管理员检查', async () => {
+    vi.mocked(auth).mockResolvedValue(mockSuperAdminSession as any);
+    const result = await requireAdmin();
+    expect(result.user.role).toBe('SUPER_ADMIN');
+  });
+});
+
+describe('requireSuperAdmin', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('应在超级管理员时返回 session', async () => {
+    vi.mocked(auth).mockResolvedValue(mockSuperAdminSession as any);
+    const result = await requireSuperAdmin();
+    expect(result.user.role).toBe('SUPER_ADMIN');
+  });
+
+  it('应在普通管理员时抛出 FORBIDDEN', async () => {
+    vi.mocked(auth).mockResolvedValue(mockAdminSession as any);
+    await expect(requireSuperAdmin()).rejects.toThrow('FORBIDDEN');
+  });
+
+  it('应在普通用户时抛出 FORBIDDEN', async () => {
+    vi.mocked(auth).mockResolvedValue(mockSession as any);
+    await expect(requireSuperAdmin()).rejects.toThrow('FORBIDDEN');
+  });
+
+  it('应在未认证时抛出 UNAUTHORIZED', async () => {
+    vi.mocked(auth).mockResolvedValue(null);
+    await expect(requireSuperAdmin()).rejects.toThrow('UNAUTHORIZED');
+  });
+
+  it('应拒绝 role 为 undefined 的超级管理员检查', async () => {
+    vi.mocked(auth).mockResolvedValue({
+      user: { id: 'user-1', name: 'Test' },
+    } as any);
+    await expect(requireSuperAdmin()).rejects.toThrow('FORBIDDEN');
+  });
+
+  it('应拒绝 role 为 READER 的超级管理员检查', async () => {
+    const readerSession = {
+      ...mockSession,
+      user: { ...mockSession.user, role: 'READER' },
+    };
+    vi.mocked(auth).mockResolvedValue(readerSession as any);
+    await expect(requireSuperAdmin()).rejects.toThrow('FORBIDDEN');
+  });
 });
 
 describe('requireOwner', () => {
@@ -95,6 +147,12 @@ describe('requireOwner', () => {
     vi.mocked(auth).mockResolvedValue(mockAdminSession as any);
     const result = await requireOwner('user-2', '文章');
     expect(result.user.role).toBe('ADMIN');
+  });
+
+  it('应允许超级管理员访问任何资源', async () => {
+    vi.mocked(auth).mockResolvedValue(mockSuperAdminSession as any);
+    const result = await requireOwner('user-3', '文章');
+    expect(result.user.role).toBe('SUPER_ADMIN');
   });
 
   it('应拒绝非所有者访问并返回有意义的错误消息', async () => {
