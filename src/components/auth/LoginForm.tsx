@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { signIn } from "@/lib/auth-client";
+import { startAuthentication, browserSupportsWebAuthn } from "@simplewebauthn/browser";
 
 export function LoginForm() {
   const router = useRouter();
@@ -11,6 +12,7 @@ export function LoginForm() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isPasskeyLoading, setIsPasskeyLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,6 +38,64 @@ export function LoginForm() {
       setIsLoading(false);
     }
   };
+
+  const handlePasskeyLogin = async () => {
+    if (!email) {
+      setError("请先输入邮箱地址");
+      return;
+    }
+
+    setIsPasskeyLoading(true);
+    setError("");
+
+    try {
+      const optionsRes = await fetch("/api/auth/webauthn/login-options", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+
+      if (!optionsRes.ok) {
+        const data = await optionsRes.json();
+        setError(data.error || "获取登录选项失败");
+        return;
+      }
+
+      const options = await optionsRes.json();
+      const challengeId = options._challengeId;
+      delete options._challengeId;
+
+      const authResponse = await startAuthentication({ optionsJSON: options });
+
+      const verifyRes = await fetch("/api/auth/webauthn/login-verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email,
+          response: authResponse,
+          challengeId,
+        }),
+      });
+
+      if (!verifyRes.ok) {
+        const data = await verifyRes.json();
+        setError(data.error || "Passkey 登录验证失败");
+        return;
+      }
+
+      router.push("/dashboard");
+      router.refresh();
+    } catch (err) {
+      if (err instanceof Error && err.name === "AbortError") {
+        return;
+      }
+      setError("Passkey 登录失败，请重试");
+    } finally {
+      setIsPasskeyLoading(false);
+    }
+  };
+
+  const webauthnSupported = typeof window !== "undefined" && browserSupportsWebAuthn();
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -84,6 +144,30 @@ export function LoginForm() {
       >
         {isLoading ? "登录中..." : "登录"}
       </button>
+
+      {webauthnSupported && (
+        <div className="relative">
+          <div className="absolute inset-0 flex items-center">
+            <span className="w-full border-t" />
+          </div>
+          <div className="relative flex justify-center text-xs uppercase">
+            <span className="bg-background px-2 text-muted-foreground">
+              或
+            </span>
+          </div>
+        </div>
+      )}
+
+      {webauthnSupported && (
+        <button
+          type="button"
+          onClick={handlePasskeyLogin}
+          disabled={isPasskeyLoading || !email}
+          className="w-full rounded-lg border py-2 text-sm hover:bg-muted disabled:opacity-50"
+        >
+          {isPasskeyLoading ? "验证中..." : "使用 Passkey 登录"}
+        </button>
+      )}
     </form>
   );
 }

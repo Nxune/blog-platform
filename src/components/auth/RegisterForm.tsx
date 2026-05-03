@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { signIn } from "@/lib/auth-client";
+import { startRegistration, browserSupportsWebAuthn } from "@simplewebauthn/browser";
 
 export function RegisterForm() {
   const router = useRouter();
@@ -11,6 +12,7 @@ export function RegisterForm() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isPasskeyLoading, setIsPasskeyLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,6 +50,65 @@ export function RegisterForm() {
       setIsLoading(false);
     }
   };
+
+  const handlePasskeyRegister = async () => {
+    if (!email || !name) {
+      setError("请先填写用户名和邮箱");
+      return;
+    }
+
+    setIsPasskeyLoading(true);
+    setError("");
+
+    try {
+      const optionsRes = await fetch("/api/auth/webauthn/register-options", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, name }),
+      });
+
+      if (!optionsRes.ok) {
+        const data = await optionsRes.json();
+        setError(data.error || "获取注册选项失败");
+        return;
+      }
+
+      const options = await optionsRes.json();
+      const challengeId = options._challengeId;
+      delete options._challengeId;
+
+      const regResponse = await startRegistration({ optionsJSON: options });
+
+      const verifyRes = await fetch("/api/auth/webauthn/register-verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email,
+          name,
+          response: regResponse,
+          challengeId,
+        }),
+      });
+
+      if (!verifyRes.ok) {
+        const data = await verifyRes.json();
+        setError(data.error || "Passkey 注册验证失败");
+        return;
+      }
+
+      router.push("/dashboard");
+      router.refresh();
+    } catch (err) {
+      if (err instanceof Error && err.name === "AbortError") {
+        return;
+      }
+      setError("Passkey 注册失败，请重试");
+    } finally {
+      setIsPasskeyLoading(false);
+    }
+  };
+
+  const webauthnSupported = typeof window !== "undefined" && browserSupportsWebAuthn();
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -103,6 +164,30 @@ export function RegisterForm() {
       >
         {isLoading ? "注册中..." : "注册"}
       </button>
+
+      {webauthnSupported && (
+        <div className="relative">
+          <div className="absolute inset-0 flex items-center">
+            <span className="w-full border-t" />
+          </div>
+          <div className="relative flex justify-center text-xs uppercase">
+            <span className="bg-background px-2 text-muted-foreground">
+              或
+            </span>
+          </div>
+        </div>
+      )}
+
+      {webauthnSupported && (
+        <button
+          type="button"
+          onClick={handlePasskeyRegister}
+          disabled={isPasskeyLoading || !email || !name}
+          className="w-full rounded-lg border py-2 text-sm hover:bg-muted disabled:opacity-50"
+        >
+          {isPasskeyLoading ? "验证中..." : "使用 Passkey 注册"}
+        </button>
+      )}
     </form>
   );
 }
