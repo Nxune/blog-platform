@@ -10,9 +10,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "无效的重置令牌" }, { status: 400 });
     }
 
-    if (!password || typeof password !== "string" || password.length < 6) {
+    if (!password || typeof password !== "string" || password.length < 8) {
       return NextResponse.json(
-        { error: "密码至少需要 6 个字符" },
+        { error: "密码至少需要 8 个字符" },
         { status: 400 }
       );
     }
