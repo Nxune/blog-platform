@@ -109,6 +109,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.name = user.name;
         token.email = user.email;
         token.picture = user.image;
+        token.username = (user as { username?: string }).username ?? null;
+        token.website = (user as { website?: string }).website ?? null;
+        token.location = (user as { location?: string }).location ?? null;
       }
       if (trigger === "update" && updateData) {
         const data = updateData as Record<string, unknown>;
@@ -121,6 +124,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (session.user) {
         (session.user as unknown as Record<string, unknown>).role = token.role;
         (session.user as unknown as Record<string, unknown>).id = token.id;
+        (session.user as unknown as Record<string, unknown>).username = token.username ?? null;
+        (session.user as unknown as Record<string, unknown>).website = token.website ?? null;
+        (session.user as unknown as Record<string, unknown>).location = token.location ?? null;
         session.user.name = token.name ?? null;
         session.user.email = token.email ?? "";
         session.user.image = token.picture ?? null;

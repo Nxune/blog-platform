@@ -122,9 +122,9 @@ export default function DashboardSettingsPage() {
         </div>
       )}
 
-      {/* 用户名 */}
+      {/* 个人资料 */}
       <section className="space-y-4 rounded-lg border p-6">
-        <h2 className="font-semibold">用户名</h2>
+        <h2 className="font-semibold">个人资料</h2>
         <div>
           <label htmlFor="name" className="block text-sm font-medium">
             显示名称
@@ -137,8 +137,60 @@ export default function DashboardSettingsPage() {
             className="mt-1 w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary"
           />
         </div>
+        <div>
+          <label htmlFor="username" className="block text-sm font-medium">
+            用户名（用于个人主页 /u/[username]）
+          </label>
+          <input
+            id="username"
+            type="text"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            placeholder="2-30 个字母/数字/下划线/连字符"
+            className="mt-1 w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary"
+          />
+        </div>
+        <div>
+          <label htmlFor="bio" className="block text-sm font-medium">
+            个人简介
+          </label>
+          <textarea
+            id="bio"
+            value={bio}
+            onChange={(e) => setBio(e.target.value)}
+            maxLength={500}
+            rows={3}
+            className="mt-1 w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary"
+          />
+        </div>
+        <div>
+          <label htmlFor="website" className="block text-sm font-medium">
+            个人网站
+          </label>
+          <input
+            id="website"
+            type="text"
+            value={website}
+            onChange={(e) => setWebsite(e.target.value)}
+            placeholder="https://example.com"
+            className="mt-1 w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary"
+          />
+        </div>
+        <div>
+          <label htmlFor="location" className="block text-sm font-medium">
+            所在地
+          </label>
+          <input
+            id="location"
+            type="text"
+            value={location}
+            onChange={(e) => setLocation(e.target.value)}
+            placeholder="中国 北京"
+            className="mt-1 w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary"
+          />
+        </div>
         <button
-          onClick={handleSaveName}
+          onClick={handleSaveProfile}
           disabled={loading === "name"}
           className="rounded-lg bg-primary px-4 py-2 text-sm text-primary-foreground hover:opacity-90 disabled:opacity-50"
         >

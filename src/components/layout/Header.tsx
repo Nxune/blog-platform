@@ -100,6 +100,15 @@ export function Header() {
                     >
                       账号设置
                     </Link>
+                    {user?.username && (
+                      <Link
+                        href={`/u/${user.username}`}
+                        onClick={() => setMenuOpen(false)}
+                        className="block px-3 py-2 text-sm hover:bg-muted"
+                      >
+                        个人主页
+                      </Link>
+                    )}
                     <button
                       onClick={() => signOut({ callbackUrl: "/" })}
                       className="block w-full px-3 py-2 text-left text-sm text-destructive hover:bg-muted"
