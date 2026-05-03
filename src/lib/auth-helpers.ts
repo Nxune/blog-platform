@@ -1,10 +1,7 @@
 import { auth } from "./auth";
-import { headers } from "next/headers";
 
 export async function requireAuth() {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
+  const session = await auth();
 
   if (!session?.user) {
     throw new Error("UNAUTHORIZED");

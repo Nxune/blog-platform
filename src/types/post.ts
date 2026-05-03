@@ -1,3 +1,5 @@
+import type { PostStatus } from "@prisma/client";
+
 export interface Post {
   id: string;
   title: string;
@@ -5,8 +7,7 @@ export interface Post {
   content: string;
   excerpt: string | null;
   coverImage: string | null;
-  published: boolean;
-  featured: boolean;
+  status: PostStatus;
   viewCount: number;
   createdAt: Date;
   updatedAt: Date;

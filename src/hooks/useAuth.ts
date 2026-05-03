@@ -1,28 +1,29 @@
 "use client";
 
-import { authClient } from "@/lib/auth-client";
+import { useSession } from "next-auth/react";
 import type { UserProfile } from "@/types/user";
 
 export function useAuth() {
-  const { data: session, isPending, error } = authClient.useSession();
+  const { data: session, status } = useSession();
 
-  const user = session?.user
-    ? ({
-        id: session.user.id,
-        name: session.user.name,
-        email: session.user.email,
+  const rawUser = session?.user as Record<string, unknown> | undefined;
+  const user: UserProfile | undefined = session?.user
+    ? {
+        id: session.user.id ?? "",
+        name: session.user.name ?? "",
+        email: session.user.email ?? "",
         image: session.user.image ?? null,
-        role: (session.user as Record<string, unknown>).role as UserProfile["role"] ?? "USER",
-        bio: (session.user as Record<string, unknown>).bio as string | null ?? null,
-        createdAt: session.user.createdAt,
-      } satisfies UserProfile)
+        role: (rawUser?.role as UserProfile["role"]) ?? "READER",
+        bio: null,
+        createdAt: new Date(),
+      }
     : undefined;
 
   return {
     user,
-    isAuthenticated: !!session?.user,
-    isLoading: isPending,
-    error,
+    isAuthenticated: status === "authenticated",
+    isLoading: status === "loading",
+    error: null,
   };
 }
 
