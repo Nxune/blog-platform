@@ -49,18 +49,21 @@ export async function PATCH(
       select: { id: true, name: true, email: true, role: true },
     });
 
-    await logAuditAction({
+    logAuditAction({
       action: "USER_ROLE_CHANGE",
       userId: adminId,
       targetId: id,
       details: `${target.role} -> ${role} (${target.email})`,
-    });
+    }).catch(() => {});
 
     return NextResponse.json(updated);
   } catch (error) {
     if (error instanceof Error && error.message === "FORBIDDEN") {
       return NextResponse.json({ error: "无权限" }, { status: 403 });
     }
-    return NextResponse.json({ error: "请先登录" }, { status: 401 });
+    if (error instanceof Error && error.message === "UNAUTHORIZED") {
+      return NextResponse.json({ error: "请先登录" }, { status: 401 });
+    }
+    return NextResponse.json({ error: "操作失败" }, { status: 500 });
   }
 }

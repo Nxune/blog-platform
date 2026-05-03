@@ -44,7 +44,7 @@ export async function POST(request: Request) {
         data: { role },
       });
 
-      await logAuditAction({
+      logAuditAction({
         action: "USER_BATCH_ROLE_CHANGE",
         userId: adminId,
         details: `targets=[${validIds.join(",")}] role=${role}`,
@@ -77,7 +77,7 @@ export async function POST(request: Request) {
         where: { id: { in: validIds } },
       });
 
-      await logAuditAction({
+      logAuditAction({
         action: "USER_BATCH_DELETE",
         userId: adminId,
         details: `targets=[${validIds.join(",")}]`,
@@ -94,6 +94,9 @@ export async function POST(request: Request) {
     if (error instanceof Error && error.message === "FORBIDDEN") {
       return NextResponse.json({ error: "无权限" }, { status: 403 });
     }
-    return NextResponse.json({ error: "请先登录" }, { status: 401 });
+    if (error instanceof Error && error.message === "UNAUTHORIZED") {
+      return NextResponse.json({ error: "请先登录" }, { status: 401 });
+    }
+    return NextResponse.json({ error: "操作失败" }, { status: 500 });
   }
 }
