@@ -164,6 +164,7 @@ model Credential {
 
 model Challenge {
   id        String   @id @default(cuid())
+  email     String?
   userId    String?
   challenge String
   expires   DateTime

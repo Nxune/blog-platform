@@ -5,6 +5,7 @@ import Google from "next-auth/providers/google";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { rateLimit } from "./rate-limit";
 import { compare } from "bcryptjs";
+import { decode } from "next-auth/jwt";
 import { prisma } from "./prisma";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
@@ -52,6 +53,45 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           image: user.image,
           role: user.role,
         };
+      },
+    }),
+    Credentials({
+      id: "webauthn",
+      name: "webauthn",
+      credentials: {
+        sessionToken: { label: "Session Token", type: "text" },
+      },
+      async authorize(credentials) {
+        if (!credentials?.sessionToken) return null;
+
+        try {
+          const secret = process.env.AUTH_SECRET;
+          if (!secret) return null;
+
+          const payload = await decode({
+            secret,
+            salt: "webauthn-session",
+            token: credentials.sessionToken as string,
+          });
+
+          if (!payload?.email) return null;
+
+          const user = await prisma.user.findUnique({
+            where: { email: payload.email as string },
+          });
+
+          if (!user) return null;
+
+          return {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            image: user.image,
+            role: user.role,
+          };
+        } catch {
+          return null;
+        }
       },
     }),
     ...(process.env.AUTH_GITHUB_ID && process.env.AUTH_GITHUB_SECRET

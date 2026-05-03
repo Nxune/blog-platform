@@ -61,7 +61,7 @@ export function RegisterForm() {
     setError("");
 
     try {
-      const optionsRes = await fetch("/api/auth/webauthn/register-options", {
+      const optionsRes = await fetch("/api/auth/webauthn/register/begin", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, name }),
@@ -79,7 +79,7 @@ export function RegisterForm() {
 
       const regResponse = await startRegistration({ optionsJSON: options });
 
-      const verifyRes = await fetch("/api/auth/webauthn/register-verify", {
+      const completeRes = await fetch("/api/auth/webauthn/register/complete", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -90,9 +90,21 @@ export function RegisterForm() {
         }),
       });
 
-      if (!verifyRes.ok) {
-        const data = await verifyRes.json();
+      if (!completeRes.ok) {
+        const data = await completeRes.json();
         setError(data.error || "Passkey 注册验证失败");
+        return;
+      }
+
+      const { sessionToken } = await completeRes.json();
+
+      const result = await signIn("webauthn", {
+        sessionToken,
+        redirect: false,
+      });
+
+      if (result?.error) {
+        setError("Passkey 注册成功但登录失败，请直接登录");
         return;
       }
 

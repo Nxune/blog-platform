@@ -5,6 +5,7 @@ import { encode } from "next-auth/jwt";
 import { prisma } from "@/lib/prisma";
 import { rateLimit } from "@/lib/rate-limit";
 import { getRPID, getOrigin } from "@/lib/webauthn";
+import { consumeChallenge } from "@/lib/webauthn-challenge-store";
 
 export async function POST(request: Request) {
   try {
@@ -13,7 +14,7 @@ export async function POST(request: Request) {
       request.headers.get("x-real-ip") ??
       "unknown";
 
-    const rl = rateLimit(`webauthn-login-verify:${ip}`, {
+    const rl = rateLimit(`webauthn-login-complete:${ip}`, {
       windowMs: 60_000,
       max: 5,
     });
@@ -25,9 +26,9 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { response, email, challengeId } = body;
+    const { response, challengeId, email } = body;
 
-    if (!response || !email || !challengeId) {
+    if (!response || !challengeId || !email) {
       return NextResponse.json({ error: "缺少必要参数" }, { status: 400 });
     }
 
@@ -40,22 +41,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "用户不存在" }, { status: 404 });
     }
 
-    const challengeRecord = await prisma.challenge.findUnique({
-      where: { id: challengeId },
-    });
-
-    if (
-      !challengeRecord ||
-      challengeRecord.userId !== user.id ||
-      challengeRecord.expires <= new Date()
-    ) {
+    const challengeData = await consumeChallenge(challengeId, user.id);
+    if (!challengeData) {
       return NextResponse.json(
         { error: "挑战已过期或无效" },
         { status: 400 }
       );
     }
-
-    await prisma.challenge.delete({ where: { id: challengeRecord.id } });
 
     const credentialRecord = user.credentials.find(
       (c) => c.id === response.id
@@ -73,7 +65,7 @@ export async function POST(request: Request) {
 
     const verification = await verifyAuthenticationResponse({
       response,
-      expectedChallenge: challengeRecord.challenge,
+      expectedChallenge: challengeData.challenge,
       expectedOrigin: origin,
       expectedRPID: rpID,
       credential: {
@@ -108,44 +100,22 @@ export async function POST(request: Request) {
       );
     }
 
-    const isSecure = process.env.NODE_ENV === "production";
-    const cookieName = isSecure
-      ? "__Secure-authjs.session-token"
-      : "authjs.session-token";
-
-    const token = await encode({
+    const sessionToken = await encode({
       secret,
-      salt: cookieName,
+      salt: "webauthn-session",
       token: {
         id: user.id,
         email: user.email,
         name: user.name,
-        picture: user.image,
+        picture: user.image ?? undefined,
         role: user.role,
       },
-      maxAge: 30 * 24 * 60 * 60,
+      maxAge: 60,
     });
 
-    const jsonResponse = NextResponse.json({
-      success: true,
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-      },
-    });
-
-    jsonResponse.cookies.set(cookieName, token, {
-      httpOnly: true,
-      secure: isSecure,
-      sameSite: "lax",
-      path: "/",
-      maxAge: 30 * 24 * 60 * 60,
-    });
-
-    return jsonResponse;
+    return NextResponse.json({ success: true, sessionToken });
   } catch (error) {
-    console.error("login-verify error:", error);
+    console.error("login/complete error:", error);
     return NextResponse.json(
       { error: "登录验证失败" },
       { status: 500 }

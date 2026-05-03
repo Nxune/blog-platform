@@ -1,20 +1,19 @@
 import { NextResponse } from "next/server";
-import {
-  generateAuthenticationOptions,
-} from "@simplewebauthn/server";
+import { generateAuthenticationOptions } from "@simplewebauthn/server";
 import type { AuthenticatorTransportFuture } from "@simplewebauthn/server";
 import { prisma } from "@/lib/prisma";
 import { rateLimit } from "@/lib/rate-limit";
 import { getRPID } from "@/lib/webauthn";
+import { createChallenge } from "@/lib/webauthn-challenge-store";
 
-export async function POST(request: Request) {
+export async function GET(request: Request) {
   try {
     const ip =
       request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
       request.headers.get("x-real-ip") ??
       "unknown";
 
-    const rl = rateLimit(`webauthn-login-options:${ip}`, {
+    const rl = rateLimit(`webauthn-login-begin:${ip}`, {
       windowMs: 60_000,
       max: 10,
     });
@@ -25,11 +24,14 @@ export async function POST(request: Request) {
       );
     }
 
-    const body = await request.json();
-    const { email } = body;
+    const { searchParams } = new URL(request.url);
+    const email = searchParams.get("email");
 
-    if (!email || typeof email !== "string") {
-      return NextResponse.json({ error: "请提供邮箱地址" }, { status: 400 });
+    if (!email) {
+      return NextResponse.json(
+        { error: "请提供邮箱地址" },
+        { status: 400 }
+      );
     }
 
     const user = await prisma.user.findUnique({
@@ -60,20 +62,14 @@ export async function POST(request: Request) {
       timeout: 60_000,
     });
 
-    const challenge = await prisma.challenge.create({
-      data: {
-        challenge: options.challenge,
-        userId: user.id,
-        expires: new Date(Date.now() + 5 * 60_000),
-      },
-    });
+    const challengeRecord = await createChallenge(options.challenge, user.id);
 
     return NextResponse.json({
       ...options,
-      _challengeId: challenge.id,
+      _challengeId: challengeRecord.id,
     });
   } catch (error) {
-    console.error("login-options error:", error);
+    console.error("login/begin error:", error);
     return NextResponse.json(
       { error: "生成登录选项失败" },
       { status: 500 }

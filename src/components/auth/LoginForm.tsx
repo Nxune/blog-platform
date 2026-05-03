@@ -49,11 +49,9 @@ export function LoginForm() {
     setError("");
 
     try {
-      const optionsRes = await fetch("/api/auth/webauthn/login-options", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
-      });
+      const optionsRes = await fetch(
+        `/api/auth/webauthn/login/begin?email=${encodeURIComponent(email)}`
+      );
 
       if (!optionsRes.ok) {
         const data = await optionsRes.json();
@@ -67,7 +65,7 @@ export function LoginForm() {
 
       const authResponse = await startAuthentication({ optionsJSON: options });
 
-      const verifyRes = await fetch("/api/auth/webauthn/login-verify", {
+      const completeRes = await fetch("/api/auth/webauthn/login/complete", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -77,9 +75,21 @@ export function LoginForm() {
         }),
       });
 
-      if (!verifyRes.ok) {
-        const data = await verifyRes.json();
+      if (!completeRes.ok) {
+        const data = await completeRes.json();
         setError(data.error || "Passkey 登录验证失败");
+        return;
+      }
+
+      const { sessionToken } = await completeRes.json();
+
+      const result = await signIn("webauthn", {
+        sessionToken,
+        redirect: false,
+      });
+
+      if (result?.error) {
+        setError("Passkey 登录失败");
         return;
       }
 
