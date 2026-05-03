@@ -7,11 +7,13 @@ vi.mock('@/services/comment.service', () => ({
   deleteComment: vi.fn(),
   listAllComments: vi.fn(),
   moderateComment: vi.fn(),
+  getCommentById: vi.fn(),
 }));
 
 vi.mock('@/lib/auth-helpers', () => ({
   requireAuth: vi.fn(),
   requireAdmin: vi.fn(),
+  requireOwner: vi.fn(),
 }));
 
 vi.mock('@/lib/validations', () => ({
@@ -24,8 +26,8 @@ vi.mock('@/lib/validations', () => ({
   },
 }));
 
-import { getCommentsByPostSlug, createComment, deleteComment, listAllComments, moderateComment } from '@/services/comment.service';
-import { requireAuth, requireAdmin } from '@/lib/auth-helpers';
+import { getCommentsByPostSlug, createComment, deleteComment, listAllComments, moderateComment, getCommentById } from '@/services/comment.service';
+import { requireAuth, requireAdmin, requireOwner } from '@/lib/auth-helpers';
 
 const mockComment = {
   id: 'comment-1',
@@ -260,11 +262,12 @@ describe('GET /api/comments（管理员）', () => {
   });
 });
 
-describe('DELETE /api/comments/[id]（管理员）', () => {
+describe('DELETE /api/comments/[id]（所有者或管理员）', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it('应成功删除评论', async () => {
-    vi.mocked(requireAdmin).mockResolvedValue({ user: { id: 'admin-1' } } as any);
+  it('评论作者应能删除自己的评论', async () => {
+    vi.mocked(getCommentById).mockResolvedValue({ id: 'comment-1', authorId: 'user-1' } as any);
+    vi.mocked(requireOwner).mockResolvedValue({ user: { id: 'user-1', role: 'USER' } } as any);
     vi.mocked(deleteComment).mockResolvedValue(undefined as any);
 
     const handler = await deleteCommentHandler();
@@ -274,14 +277,37 @@ describe('DELETE /api/comments/[id]（管理员）', () => {
     expect(res.status).toBe(200);
   });
 
-  it('应拒绝非管理员并返回 403', async () => {
-    vi.mocked(requireAdmin).mockRejectedValue(new Error('FORBIDDEN'));
+  it('管理员应能删除任何评论', async () => {
+    vi.mocked(getCommentById).mockResolvedValue({ id: 'comment-2', authorId: 'user-2' } as any);
+    vi.mocked(requireOwner).mockResolvedValue({ user: { id: 'admin-1', role: 'ADMIN' } } as any);
+    vi.mocked(deleteComment).mockResolvedValue(undefined as any);
+
+    const handler = await deleteCommentHandler();
+    const res = await handler(new Request('http://localhost:3000/api/comments/comment-2'), {
+      params: Promise.resolve({ id: 'comment-2' }),
+    } as any);
+    expect(res.status).toBe(200);
+  });
+
+  it('应拒绝非所有者非管理员并返回 403', async () => {
+    vi.mocked(getCommentById).mockResolvedValue({ id: 'comment-1', authorId: 'user-1' } as any);
+    vi.mocked(requireOwner).mockRejectedValue(new Error('FORBIDDEN'));
 
     const handler = await deleteCommentHandler();
     const res = await handler(new Request('http://localhost:3000/api/comments/comment-1'), {
       params: Promise.resolve({ id: 'comment-1' }),
     } as any);
     expect(res.status).toBe(403);
+  });
+
+  it('删除不存在的评论应返回 404', async () => {
+    vi.mocked(getCommentById).mockResolvedValue(null);
+
+    const handler = await deleteCommentHandler();
+    const res = await handler(new Request('http://localhost:3000/api/comments/nonexistent'), {
+      params: Promise.resolve({ id: 'nonexistent' }),
+    } as any);
+    expect(res.status).toBe(404);
   });
 });
 

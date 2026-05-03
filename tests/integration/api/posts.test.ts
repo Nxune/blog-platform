@@ -15,6 +15,7 @@ vi.mock('@/services/post.service', () => ({
 vi.mock('@/lib/auth-helpers', () => ({
   requireAuth: vi.fn(),
   requireAdmin: vi.fn(),
+  requireOwner: vi.fn(),
 }));
 
 // Mock validation schema to test real validation
@@ -35,7 +36,7 @@ vi.mock('@/lib/validations', () => ({
 }));
 
 import { listPosts, getPostBySlug, createPost, updatePost, deletePost, updateViewCount } from '@/services/post.service';
-import { requireAuth, requireAdmin } from '@/lib/auth-helpers';
+import { requireAuth, requireAdmin, requireOwner } from '@/lib/auth-helpers';
 
 const mockPost = {
   id: 'post-1',
@@ -172,8 +173,8 @@ describe('POST /api/posts', () => {
     expect(data.title).toBe('测试文章');
   });
 
-  it('应拒绝非管理员请求并返回 403', async () => {
-    vi.mocked(requireAdmin).mockRejectedValue(new Error('FORBIDDEN'));
+  it('应拒绝未登录请求并返回 401', async () => {
+    vi.mocked(requireAuth).mockRejectedValue(new Error('UNAUTHORIZED'));
 
     const handler = await postHandler();
     const res = await handler(new Request('http://localhost:3000/api/posts', {
@@ -181,11 +182,13 @@ describe('POST /api/posts', () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ title: '新文章', content: '# 内容' }),
     }));
-    expect(res.status).toBe(403);
+    expect(res.status).toBe(401);
+    const data = await res.json();
+    expect(data.error).toBe('请先登录');
   });
 
   it('应拒绝空标题并返回 400', async () => {
-    vi.mocked(requireAdmin).mockResolvedValue({ user: { id: 'admin-1' } } as any);
+    vi.mocked(requireAuth).mockResolvedValue({ user: { id: 'admin-1' } } as any);
 
     const handler = await postHandler();
     const res = await handler(new Request('http://localhost:3000/api/posts', {
@@ -197,7 +200,7 @@ describe('POST /api/posts', () => {
   });
 
   it('应拒绝空内容并返回 400', async () => {
-    vi.mocked(requireAdmin).mockResolvedValue({ user: { id: 'admin-1' } } as any);
+    vi.mocked(requireAuth).mockResolvedValue({ user: { id: 'admin-1' } } as any);
 
     const handler = await postHandler();
     const res = await handler(new Request('http://localhost:3000/api/posts', {
@@ -273,8 +276,8 @@ describe('GET /api/posts/[slug]', () => {
 describe('PATCH /api/posts/[slug]', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it('应成功更新文章（管理员）', async () => {
-    vi.mocked(requireAdmin).mockResolvedValue({ user: { id: 'admin-1' } } as any);
+  it('应成功更新文章（管理员或所有者）', async () => {
+    vi.mocked(requireOwner).mockResolvedValue({ user: { id: 'admin-1' } } as any);
     vi.mocked(getPostBySlug).mockResolvedValue(mockPost as any);
     vi.mocked(updatePost).mockResolvedValue({ ...mockPost, title: '更新标题' } as any);
 
@@ -289,17 +292,20 @@ describe('PATCH /api/posts/[slug]', () => {
     expect(data.title).toBe('更新标题');
   });
 
-  it('应拒绝非管理员请求并返回 403', async () => {
-    vi.mocked(requireAdmin).mockRejectedValue(new Error('FORBIDDEN'));
+  it('应拒绝无权限请求并返回 403', async () => {
+    vi.mocked(requireOwner).mockRejectedValue(new Error('FORBIDDEN'));
+    vi.mocked(getPostBySlug).mockResolvedValue(mockPost as any);
     const { PATCH } = await getBySlugHandler();
-    const res = await PATCH(new Request('http://localhost:3000/api/posts/test-post'), {
-      params: Promise.resolve({ slug: 'test-post' }),
-    } as any);
+    const res = await PATCH(new Request('http://localhost:3000/api/posts/test-post', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: '更新标题' }),
+    }), { params: Promise.resolve({ slug: 'test-post' }) } as any);
     expect(res.status).toBe(403);
   });
 
   it('应返回 404 给不存在的文章', async () => {
-    vi.mocked(requireAdmin).mockResolvedValue({ user: { id: 'admin-1' } } as any);
+    vi.mocked(requireOwner).mockResolvedValue({ user: { id: 'admin-1' } } as any);
     vi.mocked(getPostBySlug).mockResolvedValue(null);
     const { PATCH } = await getBySlugHandler();
     const res = await PATCH(new Request('http://localhost:3000/api/posts/test-post'), {
@@ -309,7 +315,7 @@ describe('PATCH /api/posts/[slug]', () => {
   });
 
   it('应支持部分更新（仅更新单个字段）', async () => {
-    vi.mocked(requireAdmin).mockResolvedValue({ user: { id: 'admin-1' } } as any);
+    vi.mocked(requireOwner).mockResolvedValue({ user: { id: 'admin-1' } } as any);
     vi.mocked(getPostBySlug).mockResolvedValue(mockPost as any);
     vi.mocked(updatePost).mockResolvedValue({ ...mockPost, excerpt: '新摘要' } as any);
 
@@ -325,7 +331,7 @@ describe('PATCH /api/posts/[slug]', () => {
   });
 
   it('应更新文章发布状态', async () => {
-    vi.mocked(requireAdmin).mockResolvedValue({ user: { id: 'admin-1' } } as any);
+    vi.mocked(requireOwner).mockResolvedValue({ user: { id: 'admin-1' } } as any);
     vi.mocked(getPostBySlug).mockResolvedValue(mockPost as any);
     vi.mocked(updatePost).mockResolvedValue({ ...mockPost, published: false } as any);
 
@@ -344,8 +350,8 @@ describe('PATCH /api/posts/[slug]', () => {
 describe('DELETE /api/posts/[slug]', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it('应成功删除文章（管理员）', async () => {
-    vi.mocked(requireAdmin).mockResolvedValue({ user: { id: 'admin-1' } } as any);
+  it('应成功删除文章（管理员或所有者）', async () => {
+    vi.mocked(requireOwner).mockResolvedValue({ user: { id: 'admin-1' } } as any);
     vi.mocked(getPostBySlug).mockResolvedValue(mockPost as any);
     vi.mocked(deletePost).mockResolvedValue(undefined as any);
 
@@ -356,8 +362,9 @@ describe('DELETE /api/posts/[slug]', () => {
     expect(res.status).toBe(200);
   });
 
-  it('应拒绝非管理员请求并返回 403', async () => {
-    vi.mocked(requireAdmin).mockRejectedValue(new Error('FORBIDDEN'));
+  it('应拒绝无权限请求并返回 403', async () => {
+    vi.mocked(requireOwner).mockRejectedValue(new Error('FORBIDDEN'));
+    vi.mocked(getPostBySlug).mockResolvedValue(mockPost as any);
     const { DELETE } = await getBySlugHandler();
     const res = await DELETE(new Request('http://localhost:3000/api/posts/test-post'), {
       params: Promise.resolve({ slug: 'test-post' }),
@@ -366,7 +373,7 @@ describe('DELETE /api/posts/[slug]', () => {
   });
 
   it('应返回 404 给不存在的文章', async () => {
-    vi.mocked(requireAdmin).mockResolvedValue({ user: { id: 'admin-1' } } as any);
+    vi.mocked(requireOwner).mockResolvedValue({ user: { id: 'admin-1' } } as any);
     vi.mocked(getPostBySlug).mockResolvedValue(null);
     const { DELETE } = await getBySlugHandler();
     const res = await DELETE(new Request('http://localhost:3000/api/posts/test-post'), {
@@ -376,7 +383,7 @@ describe('DELETE /api/posts/[slug]', () => {
   });
 
   it('应删除草稿文章', async () => {
-    vi.mocked(requireAdmin).mockResolvedValue({ user: { id: 'admin-1' } } as any);
+    vi.mocked(requireOwner).mockResolvedValue({ user: { id: 'admin-1' } } as any);
     vi.mocked(getPostBySlug).mockResolvedValue({ ...mockPost, published: false } as any);
     vi.mocked(deletePost).mockResolvedValue(undefined as any);
 
