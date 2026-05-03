@@ -27,11 +27,11 @@ export async function POST(request: Request) {
         data: { status },
       });
 
-      await logAuditAction({
+      logAuditAction({
         action: "COMMENT_BATCH_MODERATE",
         userId: adminId,
         details: `commentIds=[${commentIds.join(",")}] status=${status}`,
-      });
+      }).catch(() => {});
 
       return NextResponse.json({ success: true, updatedCount: commentIds.length });
     }
@@ -41,11 +41,11 @@ export async function POST(request: Request) {
         where: { id: { in: commentIds } },
       });
 
-      await logAuditAction({
+      logAuditAction({
         action: "COMMENT_DELETE",
         userId: adminId,
         details: `commentIds=[${commentIds.join(",")}]`,
-      });
+      }).catch(() => {});
 
       return NextResponse.json({ success: true, deletedCount: commentIds.length });
     }

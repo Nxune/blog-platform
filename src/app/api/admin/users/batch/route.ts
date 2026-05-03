@@ -48,7 +48,7 @@ export async function POST(request: Request) {
         action: "USER_BATCH_ROLE_CHANGE",
         userId: adminId,
         details: `targets=[${validIds.join(",")}] role=${role}`,
-      });
+      }).catch(() => {});
 
       return NextResponse.json({
         success: true,
@@ -73,6 +73,11 @@ export async function POST(request: Request) {
         );
       }
 
+      // Cascade delete user's content before deleting users
+      await prisma.comment.deleteMany({ where: { authorId: { in: validIds } } });
+      await prisma.postTag.deleteMany({ where: { post: { authorId: { in: validIds } } } });
+      await prisma.comment.deleteMany({ where: { post: { authorId: { in: validIds } } } });
+      await prisma.post.deleteMany({ where: { authorId: { in: validIds } } });
       await prisma.user.deleteMany({
         where: { id: { in: validIds } },
       });
@@ -81,7 +86,7 @@ export async function POST(request: Request) {
         action: "USER_BATCH_DELETE",
         userId: adminId,
         details: `targets=[${validIds.join(",")}]`,
-      });
+      }).catch(() => {});
 
       return NextResponse.json({
         success: true,
