@@ -163,6 +163,23 @@ USER         ───  发帖 · 评论 · 个人设置
 | `AUTH_GITHUB_SECRET` | GitHub OAuth Secret | — |
 | `AUTH_GOOGLE_ID` | Google OAuth Client ID | — |
 | `AUTH_GOOGLE_SECRET` | Google OAuth Secret | — |
+| `SMTP_HOST` | SMTP 服务器地址（密码重置邮件） | — |
+| `SMTP_PORT` | SMTP 端口 | `587` |
+| `SMTP_USER` | SMTP 用户名 | — |
+| `SMTP_PASS` | SMTP 密码 | — |
+| `SMTP_FROM` | 发件人地址 | `noreply@blog-platform.com` |
+
+---
+
+## 文档
+
+| 文档 | 说明 |
+|------|------|
+| [API 文档](docs/api.md) | 全部 REST 端点参考 |
+| [部署指南](docs/deploy.md) | Docker / 手动部署步骤 |
+| [贡献指南](docs/CONTRIBUTING.md) | 分支策略、编码规范、PR 流程 |
+| [更新日志](docs/CHANGELOG.md) | 版本变更记录 |
+| [超级管理员设计](docs/super-admin-design.md) | 权限体系设计方案 |
 
 ---
 
