@@ -1,0 +1,36 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl:*)",
+      "Bash(cd:C:\\Users\\Nxune\\Work\\blog-platform *)",
+      "Bash(git:*)",
+      "Bash(pnpm:*)",
+      "Bash(npx:*)",
+      "Bash(node:*)",
+      "Bash(mkdir:*)",
+      "Bash(rm:*)",
+      "Bash(cp:*)",
+      "Bash(ls:*)",
+      "Bash(find:*)",
+      "Bash(cat:*)",
+      "Bash(taskkill:*)",
+      "Bash(netstat:*)",
+      "Bash(sleep:*)",
+      "Bash(gh:*)",
+      "WebFetch",
+      "WebSearch",
+      "Read",
+      "Edit",
+      "Write",
+      "Glob",
+      "Grep",
+      "TaskCreate",
+      "TaskUpdate",
+      "TaskList",
+      "Agent",
+      "SendMessage",
+      "TeamCreate",
+      "TeamDelete"
+    ]
+  }
+}
