@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { sanitizeHtml } from "@/lib/utils";
 
 interface EditorPreviewProps {
   content: string;
@@ -33,7 +34,7 @@ export function EditorPreview({ content }: EditorPreviewProps) {
   return (
     <div
       className="prose prose-sm max-w-none p-4"
-      dangerouslySetInnerHTML={{ __html: html }}
+      dangerouslySetInnerHTML={{ __html: sanitizeHtml(html) }}
     />
   );
 }

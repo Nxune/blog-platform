@@ -1,5 +1,5 @@
 import { getPostBySlug } from "@/services/post.service";
-import { formatDate } from "@/lib/utils";
+import { formatDate, sanitizeHtml } from "@/lib/utils";
 import { CommentSection } from "@/components/comments/CommentSection";
 import { notFound } from "next/navigation";
 
@@ -63,7 +63,7 @@ export default async function PostPage({ params }: PostPageProps) {
 
       <div
         className="prose prose-lg max-w-none"
-        dangerouslySetInnerHTML={{ __html: post.content }}
+        dangerouslySetInnerHTML={{ __html: sanitizeHtml(post.content) }}
       />
 
       <hr className="my-12" />
