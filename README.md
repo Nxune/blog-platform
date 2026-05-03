@@ -52,8 +52,10 @@ pnpm dev
 
 浏览器访问 **http://localhost:3000**
 
-> **首个注册用户自动成为超级管理员 (SUPER_ADMIN)**。
-> 如需重置管理员，执行：`npx tsx scripts/set-super-admin.ts <邮箱>`
+> 注册后运行以下命令将用户提升为超级管理员：
+> ```bash
+> pnpm setup-admin <邮箱>
+> ```
 
 ### 使用 PostgreSQL
 
@@ -80,7 +82,7 @@ pnpm db:migrate
 | `pnpm type-check` | TypeScript 类型检查 |
 | `pnpm db:migrate` | 数据库迁移 |
 | `pnpm db:studio` | Prisma Studio 管理界面 |
-| `npx tsx scripts/set-super-admin.ts <email>` | 重置超级管理员 |
+| `pnpm setup-admin <email>` | 设置超级管理员 |
 
 ---
 
