@@ -2,9 +2,11 @@
 
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { useSession } from "next-auth/react";
 
 export default function DashboardSettingsPage() {
   const { user } = useAuth();
+  const { update } = useSession();
   const [name, setName] = useState(user?.name ?? "");
 
   // Email change
@@ -34,6 +36,7 @@ export default function DashboardSettingsPage() {
       });
       if (res.ok) {
         showMessage("success", "用户名已更新");
+        await update({ name });
       } else {
         const data = await res.json();
         showMessage("error", data.error ?? "更新失败");
@@ -57,6 +60,7 @@ export default function DashboardSettingsPage() {
       const data = await res.json();
       if (res.ok) {
         showMessage("success", data.message ?? "邮箱已更新");
+        await update({ email: newEmail });
         setNewEmail("");
         setEmailPassword("");
       } else {
