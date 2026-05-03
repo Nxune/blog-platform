@@ -115,6 +115,24 @@ describe('GET /api/posts', () => {
     await handler(new Request('http://localhost:3000/api/posts?search=react'));
     expect(listPosts).toHaveBeenCalledWith(expect.objectContaining({ search: 'react' }));
   });
+
+  it('应传递分页参数', async () => {
+    vi.mocked(listPosts).mockResolvedValue({
+      posts: [mockPost], total: 50, page: 3, pageSize: 20, totalPages: 3,
+    });
+    const handler = await getHandler();
+    await handler(new Request('http://localhost:3000/api/posts?page=3&pageSize=20'));
+    expect(listPosts).toHaveBeenCalledWith(expect.objectContaining({ page: 3, pageSize: 20 }));
+  });
+
+  it('应传递已发布筛选参数', async () => {
+    vi.mocked(listPosts).mockResolvedValue({
+      posts: [mockPost], total: 1, page: 1, pageSize: 10, totalPages: 1,
+    });
+    const handler = await getHandler();
+    await handler(new Request('http://localhost:3000/api/posts?published=true'));
+    expect(listPosts).toHaveBeenCalledWith(expect.objectContaining({ published: true }));
+  });
 });
 
 describe('POST /api/posts', () => {
@@ -156,6 +174,18 @@ describe('POST /api/posts', () => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ title: '', content: '内容' }),
+    }));
+    expect(res.status).toBe(400);
+  });
+
+  it('应拒绝空内容并返回 400', async () => {
+    vi.mocked(requireAdmin).mockResolvedValue({ user: { id: 'admin-1' } } as any);
+
+    const handler = await postHandler();
+    const res = await handler(new Request('http://localhost:3000/api/posts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: '标题', content: '' }),
     }));
     expect(res.status).toBe(400);
   });
@@ -221,6 +251,22 @@ describe('PATCH /api/posts/[slug]', () => {
       params: Promise.resolve({ slug: 'test-post' }),
     } as any);
     expect(res.status).toBe(404);
+  });
+
+  it('应支持部分更新（仅更新单个字段）', async () => {
+    vi.mocked(requireAdmin).mockResolvedValue({ user: { id: 'admin-1' } } as any);
+    vi.mocked(getPostBySlug).mockResolvedValue(mockPost as any);
+    vi.mocked(updatePost).mockResolvedValue({ ...mockPost, excerpt: '新摘要' } as any);
+
+    const { PATCH } = await getBySlugHandler();
+    const res = await PATCH(new Request('http://localhost:3000/api/posts/test-post', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ excerpt: '新摘要' }),
+    }), { params: Promise.resolve({ slug: 'test-post' }) } as any);
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.excerpt).toBe('新摘要');
   });
 });
 

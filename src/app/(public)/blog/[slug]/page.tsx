@@ -23,7 +23,7 @@ export default async function PostPage({ params }: PostPageProps) {
   const { slug } = await params;
   const post = await getPostBySlug(slug);
 
-  if (!post || !post.published) {
+  if (!post || post.status !== "PUBLISHED") {
     notFound();
   }
 

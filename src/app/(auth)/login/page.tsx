@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { authClient } from "@/lib/auth-client";
+import { signIn } from "@/lib/auth-client";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -18,13 +18,14 @@ export default function LoginPage() {
     setError("");
 
     try {
-      const { error: authError } = await authClient.signIn.email({
+      const result = await signIn("credentials", {
         email,
         password,
+        redirect: false,
       });
 
-      if (authError) {
-        setError(authError.message || "登录失败");
+      if (result?.error) {
+        setError("邮箱或密码错误");
       } else {
         router.push("/dashboard");
         router.refresh();

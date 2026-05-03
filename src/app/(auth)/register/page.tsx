@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { authClient } from "@/lib/auth-client";
+import { signIn } from "@/lib/auth-client";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -19,14 +19,26 @@ export default function RegisterPage() {
     setError("");
 
     try {
-      const { error: authError } = await authClient.signUp.email({
-        name,
-        email,
-        password,
+      const res = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email, password }),
       });
 
-      if (authError) {
-        setError(authError.message || "注册失败");
+      if (!res.ok) {
+        const data = await res.json();
+        setError(data.error || "注册失败");
+        return;
+      }
+
+      const result = await signIn("credentials", {
+        email,
+        password,
+        redirect: false,
+      });
+
+      if (result?.error) {
+        setError("注册成功但登录失败，请直接登录");
       } else {
         router.push("/dashboard");
         router.refresh();

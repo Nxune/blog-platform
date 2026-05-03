@@ -5,10 +5,10 @@ import { postSchema } from "@/lib/validations";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const params = {
+  const params: Parameters<typeof listPosts>[0] = {
     page: Number(searchParams.get("page")) || 1,
     pageSize: Number(searchParams.get("pageSize")) || 10,
-    published: searchParams.get("published") === "true" ? true : undefined,
+    status: searchParams.get("status") as "PUBLISHED" | "DRAFT" | "ARCHIVED" | undefined,
     tag: searchParams.get("tag") || undefined,
     search: searchParams.get("search") || undefined,
   };
@@ -29,9 +29,10 @@ export async function POST(request: Request) {
     const parsed = postSchema.parse(body);
     const session = await requireAuth();
 
+    const uid = (session.user as { id: string }).id;
     const post = await createPost({
       ...parsed,
-      authorId: session.user.id,
+      authorId: uid,
     });
 
     return NextResponse.json(post, { status: 201 });

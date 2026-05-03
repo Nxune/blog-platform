@@ -1,27 +1,40 @@
 import { prisma } from "@/lib/prisma";
-import type { CommentStatus } from "@prisma/client";
+import type { Comment } from "@/types/comment";
 
 const commentInclude = {
   author: {
-    select: { id: true, name: true, email: true, image: true },
+    select: { id: true, name: true, email: true, avatar: true },
   },
 } as const;
 
+function mapComment(comment: Record<string, unknown>): Comment {
+  const author = comment.author as Record<string, unknown> | undefined;
+  const replies = comment.replies as Record<string, unknown>[] | undefined;
+  return {
+    ...comment,
+    isApproved: (comment.isApproved as boolean) ?? true,
+    author: author
+      ? {
+          ...author,
+          image: (author.avatar as string | null) ?? null,
+        }
+      : (undefined as unknown as Comment["author"]),
+    replies: replies ? replies.map(mapComment) : undefined,
+  } as Comment;
+}
+
 export async function getCommentsByPostSlug(postSlug: string) {
-  // Verify post exists
   const post = await prisma.post.findUnique({
     where: { slug: postSlug },
     select: { id: true },
   });
 
-  if (!post) {
-    throw new Error("NOT_FOUND");
-  }
+  if (!post) throw new Error("NOT_FOUND");
 
   const comments = await prisma.comment.findMany({
     where: {
       postId: post.id,
-      status: "APPROVED",
+      isApproved: true,
     },
     include: {
       ...commentInclude,
@@ -33,7 +46,7 @@ export async function getCommentsByPostSlug(postSlug: string) {
     orderBy: { createdAt: "desc" },
   });
 
-  return comments;
+  return comments.map(mapComment);
 }
 
 export async function createComment(data: {
@@ -44,10 +57,10 @@ export async function createComment(data: {
 }) {
   const post = await prisma.post.findUnique({
     where: { slug: data.postSlug },
-    select: { id: true, published: true },
+    select: { id: true, status: true },
   });
 
-  if (!post || !post.published) {
+  if (!post || post.status !== "PUBLISHED") {
     throw new Error("POST_NOT_FOUND");
   }
 
@@ -55,14 +68,12 @@ export async function createComment(data: {
     const parent = await prisma.comment.findUnique({
       where: { id: data.parentId },
     });
-
     if (!parent || parent.postId !== post.id) {
       throw new Error("PARENT_NOT_FOUND");
     }
   }
 
-  // Basic spam detection
-  const status = detectSpam(data.content) ? "SPAM" : "APPROVED";
+  const isApproved = !detectSpam(data.content);
 
   const comment = await prisma.comment.create({
     data: {
@@ -70,21 +81,21 @@ export async function createComment(data: {
       authorId: data.authorId,
       postId: post.id,
       parentId: data.parentId ?? null,
-      status,
+      isApproved,
     },
     include: commentInclude,
   });
 
-  return comment;
+  return mapComment(comment);
 }
 
-export async function moderateComment(commentId: string, status: CommentStatus) {
+export async function setCommentApproval(commentId: string, isApproved: boolean) {
   const comment = await prisma.comment.update({
     where: { id: commentId },
-    data: { status },
+    data: { isApproved },
     include: commentInclude,
   });
-  return comment;
+  return mapComment(comment);
 }
 
 export async function deleteComment(commentId: string) {
@@ -94,10 +105,10 @@ export async function deleteComment(commentId: string) {
 export async function listAllComments(params: {
   page?: number;
   pageSize?: number;
-  status?: CommentStatus;
+  isApproved?: boolean;
 }) {
-  const { page = 1, pageSize = 20, status } = params;
-  const where = status ? { status } : {};
+  const { page = 1, pageSize = 20, isApproved } = params;
+  const where = isApproved !== undefined ? { isApproved } : {};
 
   const [comments, total] = await Promise.all([
     prisma.comment.findMany({
@@ -113,7 +124,16 @@ export async function listAllComments(params: {
     prisma.comment.count({ where }),
   ]);
 
-  return { comments, total, page, pageSize, totalPages: Math.ceil(total / pageSize) };
+  return {
+    comments: comments.map((c) => ({
+      ...c,
+      author: { ...c.author, image: c.author.avatar ?? null },
+    })),
+    total,
+    page,
+    pageSize,
+    totalPages: Math.ceil(total / pageSize),
+  };
 }
 
 function detectSpam(content: string): boolean {
@@ -122,6 +142,5 @@ function detectSpam(content: string): boolean {
     /(?:buy|click|cheap|free|earn money|subscribe|promotion)/i,
     /(?:\[.*?\]\(.*?\)){3,}/,
   ];
-
   return spamPatterns.some((pattern) => pattern.test(content));
 }

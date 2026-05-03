@@ -31,6 +31,8 @@ export async function POST(
     return NextResponse.json({ error: "请先登录" }, { status: 401 });
   }
 
+  const userId = (session.user as { id: string }).id;
+
   const { slug } = await params;
   const body = await request.json();
 
@@ -42,7 +44,7 @@ export async function POST(
   try {
     const comment = await createComment({
       content: parsed.data.content,
-      authorId: session.user.id,
+      authorId: userId,
       postSlug: slug,
       parentId: parsed.data.parentId,
     });

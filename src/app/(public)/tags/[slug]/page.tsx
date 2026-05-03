@@ -13,7 +13,7 @@ export default async function TagPage({ params }: TagPageProps) {
 
   if (!tag) notFound();
 
-  const { posts } = await listPosts({ tag: slug, published: true, pageSize: 50 });
+  const { posts } = await listPosts({ tag: slug, status: "PUBLISHED", pageSize: 50 });
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-12">

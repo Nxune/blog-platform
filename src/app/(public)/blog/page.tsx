@@ -12,7 +12,7 @@ export default async function BlogPage({ searchParams }: BlogPageProps) {
   const { posts, total, totalPages } = await listPosts({
     page,
     pageSize: 10,
-    published: true,
+    status: "PUBLISHED",
     tag: params.tag,
   });
 

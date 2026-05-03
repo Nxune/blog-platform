@@ -1,4 +1,3 @@
-import type { CommentStatus } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { listAllComments } from "@/services/comment.service";
 import { requireAdmin } from "@/lib/auth-helpers";
@@ -11,13 +10,11 @@ export async function GET(request: Request) {
   }
 
   const { searchParams } = new URL(request.url);
-  const statusParam = searchParams.get("status");
+  const approvedParam = searchParams.get("approved");
   const params: Parameters<typeof listAllComments>[0] = {
     page: Number(searchParams.get("page")) || 1,
     pageSize: Number(searchParams.get("pageSize")) || 20,
-    status: (statusParam && ["PENDING", "APPROVED", "SPAM", "DELETED"].includes(statusParam)
-      ? (statusParam as CommentStatus)
-      : undefined),
+    isApproved: approvedParam === "true" ? true : approvedParam === "false" ? false : undefined,
   };
 
   const result = await listAllComments(params);

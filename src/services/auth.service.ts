@@ -8,18 +8,28 @@ export async function getUserById(id: string): Promise<UserProfile | null> {
       id: true,
       name: true,
       email: true,
-      image: true,
+      username: true,
+      avatar: true,
       role: true,
       bio: true,
       createdAt: true,
     },
   });
-  return user;
+  if (!user) return null;
+  return {
+    id: user.id,
+    name: user.name ?? "",
+    email: user.email,
+    image: user.avatar,
+    role: user.role,
+    bio: user.bio,
+    createdAt: user.createdAt,
+  };
 }
 
 export async function updateProfile(
   userId: string,
-  data: { name?: string; bio?: string; image?: string }
+  data: { name?: string; bio?: string }
 ): Promise<UserProfile> {
   const user = await prisma.user.update({
     where: { id: userId },
@@ -28,11 +38,20 @@ export async function updateProfile(
       id: true,
       name: true,
       email: true,
-      image: true,
+      username: true,
+      avatar: true,
       role: true,
       bio: true,
       createdAt: true,
     },
   });
-  return user;
+  return {
+    id: user.id,
+    name: user.name ?? "",
+    email: user.email,
+    image: user.avatar,
+    role: user.role,
+    bio: user.bio,
+    createdAt: user.createdAt,
+  };
 }
