@@ -6,11 +6,11 @@ export const dynamic = "force-dynamic";
 
 export default async function DashboardCommentsPage() {
   const session = await auth();
-  if (
-    !session?.user ||
-    (session.user as Record<string, unknown>).role !== "ADMIN"
-  ) {
+  if (!session?.user) {
     redirect("/login");
+  }
+  if ((session.user as Record<string, unknown>).role !== "ADMIN") {
+    redirect("/dashboard");
   }
 
   const comments = await prisma.comment.findMany({
