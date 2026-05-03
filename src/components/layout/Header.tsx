@@ -14,6 +14,7 @@ const roleBadge: Record<string, string> = {
 export function Header() {
   const { user, isAuthenticated } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   return (
     <header className="border-b">
@@ -35,10 +36,28 @@ export function Header() {
           </nav>
         </div>
 
-        <div className="flex items-center gap-4">
-          <Link href="/search" className="text-sm text-muted-foreground hover:text-foreground">
-            搜索
+        <div className="flex items-center gap-1 md:gap-4">
+          <Link href="/search" className="rounded-lg p-2 text-sm text-muted-foreground hover:text-foreground md:px-0" aria-label="搜索">
+            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+            </svg>
+            <span className="hidden md:inline">搜索</span>
           </Link>
+
+          <button
+            onClick={() => setMobileNavOpen(!mobileNavOpen)}
+            className="rounded-lg p-2 hover:bg-muted md:hidden"
+            aria-label={mobileNavOpen ? "关闭导航菜单" : "打开导航菜单"}
+            aria-expanded={mobileNavOpen}
+          >
+            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+              {mobileNavOpen ? (
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+              ) : (
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+              )}
+            </svg>
+          </button>
           {isAuthenticated && user ? (
             <div className="relative">
               <button
@@ -106,6 +125,37 @@ export function Header() {
           )}
         </div>
       </div>
+
+      {mobileNavOpen && (
+        <>
+          <div className="fixed inset-0 z-40 bg-black/20" onClick={() => setMobileNavOpen(false)} />
+          <nav className="fixed left-0 right-0 top-16 z-50 border-b bg-background px-4 pb-4 pt-2 shadow-lg md:hidden">
+            <div className="flex flex-col gap-1">
+              <Link
+                href="/blog"
+                onClick={() => setMobileNavOpen(false)}
+                className="rounded-lg px-3 py-2 text-sm hover:bg-muted"
+              >
+                帖子
+              </Link>
+              <Link
+                href="/tags"
+                onClick={() => setMobileNavOpen(false)}
+                className="rounded-lg px-3 py-2 text-sm hover:bg-muted"
+              >
+                标签
+              </Link>
+              <Link
+                href="/about"
+                onClick={() => setMobileNavOpen(false)}
+                className="rounded-lg px-3 py-2 text-sm hover:bg-muted"
+              >
+                关于
+              </Link>
+            </div>
+          </nav>
+        </>
+      )}
     </header>
   );
 }
