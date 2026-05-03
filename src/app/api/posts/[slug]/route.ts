@@ -31,7 +31,10 @@ export async function PATCH(
 
   try {
     await requireOwner(post.authorId, "文章");
-  } catch {
+  } catch (error) {
+    if (error instanceof Error && error.message === "UNAUTHORIZED") {
+      return NextResponse.json({ error: "请先登录" }, { status: 401 });
+    }
     return NextResponse.json({ error: "无权限" }, { status: 403 });
   }
 

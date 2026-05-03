@@ -35,6 +35,9 @@ export async function DELETE(
     if (error instanceof Error && error.message === "FORBIDDEN") {
       return NextResponse.json({ error: "无权限" }, { status: 403 });
     }
-    return NextResponse.json({ error: "请先登录" }, { status: 401 });
+    if (error instanceof Error && error.message === "UNAUTHORIZED") {
+      return NextResponse.json({ error: "请先登录" }, { status: 401 });
+    }
+    return NextResponse.json({ error: "操作失败" }, { status: 500 });
   }
 }

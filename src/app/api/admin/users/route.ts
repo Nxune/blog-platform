@@ -57,6 +57,9 @@ export async function GET(request: Request) {
     if (error instanceof Error && error.message === "FORBIDDEN") {
       return NextResponse.json({ error: "无权限" }, { status: 403 });
     }
-    return NextResponse.json({ error: "请先登录" }, { status: 401 });
+    if (error instanceof Error && error.message === "UNAUTHORIZED") {
+      return NextResponse.json({ error: "请先登录" }, { status: 401 });
+    }
+    return NextResponse.json({ error: "获取用户列表失败" }, { status: 500 });
   }
 }

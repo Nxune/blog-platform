@@ -30,7 +30,7 @@ export async function POST(request: Request) {
     const body = await request.json();
     const parsed = postSchema.parse(body);
 
-    const uid = (session.user as { id: string }).id;
+    const uid = (session.user as Record<string, unknown>).id as string;
     const post = await createPost({
       ...parsed,
       authorId: uid,
