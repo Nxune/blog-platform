@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-// Mock Next.js redirect — spy that throws for unauthenticated flows
+// Mock Next.js redirect
 const NEXT_REDIRECT = 'NEXT_REDIRECT';
 const mockRedirect = vi.fn(() => {
   throw new Error(NEXT_REDIRECT);
@@ -27,15 +27,9 @@ vi.mock('@/lib/prisma', () => ({
   },
 }));
 
-// Import modules under the mocks
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 
-/**
- * Helper to load the dashboard page module and invoke its default export.
- * We re-load the module for each test to avoid cross-contamination via
- * module-level closure over the mocked dependencies.
- */
 async function renderDashboard() {
   const mod = await import('@/app/dashboard/page');
   return mod.default();
@@ -46,7 +40,6 @@ async function renderDashboardPosts() {
   return mod.default();
 }
 
-// ─── session fixtures ───
 const adminSession = {
   user: { id: 'admin-1', name: 'Admin', email: 'admin@test.com', role: 'ADMIN' },
   expires: new Date(Date.now() + 86400000).toISOString(),
@@ -58,13 +51,11 @@ const userSession = {
 };
 
 // ──────────────────────────────────────────
-// Dashboard 概览页 (/dashboard) — ADMIN only
+// Dashboard 概览页 (/dashboard)
 // ──────────────────────────────────────────
 describe('Dashboard 概览页 (/dashboard)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // Re-seed the redirect spy — clearAllMocks wipes mock implementations,
-    // so we restore our redirect spy after each clear.
     mockRedirect.mockImplementation(() => { throw new Error(NEXT_REDIRECT); });
   });
 
@@ -79,14 +70,56 @@ describe('Dashboard 概览页 (/dashboard)', () => {
 
     const element = await renderDashboard();
     expect(element).toBeTruthy();
-    expect(typeof element).toBe('object');
   });
 
-  it('普通用户应被重定向到 /login', async () => {
+  it('普通用户应能访问并看到自己的统计', async () => {
     vi.mocked(auth).mockResolvedValue(userSession as any);
+    vi.mocked(prisma.post.count).mockResolvedValue(3);
+    vi.mocked(prisma.comment.count).mockResolvedValue(7);
+    vi.mocked(prisma.tag.count).mockResolvedValue(5);
+    vi.mocked(prisma.post.aggregate).mockResolvedValue({
+      _sum: { viewCount: 150 },
+    } as any);
 
-    await expect(renderDashboard()).rejects.toThrow(NEXT_REDIRECT);
-    expect(mockRedirect).toHaveBeenCalledWith('/login');
+    const element = await renderDashboard();
+    expect(element).toBeTruthy();
+    expect(mockRedirect).not.toHaveBeenCalled();
+  });
+
+  it('普通用户统计查询按 authorId 过滤', async () => {
+    vi.mocked(auth).mockResolvedValue(userSession as any);
+    vi.mocked(prisma.post.count).mockResolvedValue(3);
+    vi.mocked(prisma.comment.count).mockResolvedValue(7);
+    vi.mocked(prisma.tag.count).mockResolvedValue(5);
+    vi.mocked(prisma.post.aggregate).mockResolvedValue({
+      _sum: { viewCount: 150 },
+    } as any);
+
+    await renderDashboard();
+
+    expect(prisma.post.count).toHaveBeenCalledWith(
+      { where: { authorId: 'user-1' } }
+    );
+    expect(prisma.post.aggregate).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { authorId: 'user-1' } })
+    );
+  });
+
+  it('管理员统计查询不按 authorId 过滤', async () => {
+    vi.mocked(auth).mockResolvedValue(adminSession as any);
+    vi.mocked(prisma.post.count).mockResolvedValue(10);
+    vi.mocked(prisma.comment.count).mockResolvedValue(25);
+    vi.mocked(prisma.tag.count).mockResolvedValue(5);
+    vi.mocked(prisma.post.aggregate).mockResolvedValue({
+      _sum: { viewCount: 1000 },
+    } as any);
+
+    await renderDashboard();
+
+    expect(prisma.post.count).toHaveBeenCalledWith();  // no filter
+    expect(prisma.post.aggregate).toHaveBeenCalledWith(
+      { _sum: { viewCount: true } }
+    );
   });
 
   it('未登录用户应被重定向到 /login', async () => {
@@ -94,23 +127,6 @@ describe('Dashboard 概览页 (/dashboard)', () => {
 
     await expect(renderDashboard()).rejects.toThrow(NEXT_REDIRECT);
     expect(mockRedirect).toHaveBeenCalledWith('/login');
-  });
-
-  it('管理员页面调用正确的统计数据查询', async () => {
-    vi.mocked(auth).mockResolvedValue(adminSession as any);
-    vi.mocked(prisma.post.count).mockResolvedValue(42);
-    vi.mocked(prisma.comment.count).mockResolvedValue(100);
-    vi.mocked(prisma.tag.count).mockResolvedValue(8);
-    vi.mocked(prisma.post.aggregate).mockResolvedValue({
-      _sum: { viewCount: 5000 },
-    } as any);
-
-    await renderDashboard();
-
-    expect(prisma.post.count).toHaveBeenCalledOnce();
-    expect(prisma.comment.count).toHaveBeenCalledOnce();
-    expect(prisma.tag.count).toHaveBeenCalledOnce();
-    expect(prisma.post.aggregate).toHaveBeenCalledOnce();
   });
 });
 
@@ -144,7 +160,6 @@ describe('Dashboard 文章列表页 (/dashboard/posts)', () => {
     await renderDashboardPosts();
 
     const callArg = vi.mocked(prisma.post.findMany).mock.calls[0][0];
-    // ADMIN passes where: undefined, so no authorId filter
     expect(callArg?.where === undefined || !('authorId' in (callArg?.where ?? {}))).toBe(true);
   });
 
@@ -157,14 +172,12 @@ describe('Dashboard 文章列表页 (/dashboard/posts)', () => {
 
   it('普通用户看到自己的文章数据', async () => {
     vi.mocked(auth).mockResolvedValue(userSession as any);
-    const mockPosts = [
-      {
-        id: 'p1', title: '我的文章', slug: 'my-post', published: true,
-        createdAt: new Date(), updatedAt: new Date(),
-        author: { name: 'User', email: 'user@test.com' },
-        _count: { comments: 3 },
-      },
-    ];
+    const mockPosts = [{
+      id: 'p1', title: '我的文章', slug: 'my-post', published: true,
+      createdAt: new Date(), updatedAt: new Date(),
+      author: { name: 'User', email: 'user@test.com' },
+      _count: { comments: 3 },
+    }];
     vi.mocked(prisma.post.findMany).mockResolvedValue(mockPosts as any);
 
     const element = await renderDashboardPosts();
@@ -179,7 +192,7 @@ describe('Dashboard 文章列表页 (/dashboard/posts)', () => {
     );
   });
 
-  it('管理员看到所有文章数据（含不同作者）', async () => {
+  it('管理员看到所有文章数据', async () => {
     vi.mocked(auth).mockResolvedValue(adminSession as any);
     const mockPosts = [
       {
