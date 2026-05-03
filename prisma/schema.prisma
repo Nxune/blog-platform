@@ -23,15 +23,12 @@ enum CommentStatus {
 model User {
   id            String    @id @default(cuid())
   name          String?
-  username      String?   @unique
   email         String    @unique
   emailVerified DateTime?
   image         String?
   password      String?
   role          Role      @default(USER)
   bio           String?
-  website       String?
-  location      String?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
@@ -40,7 +37,6 @@ model User {
   accounts      Account[]
   sessions      Session[]
   credentials   Credential[]
-  likes         Like[]
 }
 
 model Post {
@@ -62,7 +58,6 @@ model Post {
 
   tags        TagOnPost[]
   comments    Comment[]
-  likes       Like[]
 }
 
 model Tag {
@@ -165,18 +160,6 @@ model Credential {
   lastUsed   DateTime @default(now())
 
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-
-model Like {
-  id        String   @id @default(cuid())
-  userId    String
-  postId    String
-  createdAt DateTime @default(now())
-
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, postId])
 }
 
 model Challenge {

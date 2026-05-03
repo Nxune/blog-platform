@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
 import { getPostBySlug, updatePost, deletePost, updateViewCount } from "@/services/post.service";
 import { requireOwner } from "@/lib/auth-helpers";
-import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
 
 export async function GET(
   _request: Request,
@@ -17,17 +15,7 @@ export async function GET(
 
   updateViewCount(slug).catch(() => {});
 
-  const session = await auth();
-  const likeCount = await prisma.like.count({ where: { postId: post.id } });
-  let liked = false;
-  if (session?.user?.id) {
-    const existing = await prisma.like.findUnique({
-      where: { userId_postId: { userId: session.user.id, postId: post.id } },
-    });
-    liked = !!existing;
-  }
-
-  return NextResponse.json({ ...post, likeCount, liked });
+  return NextResponse.json(post);
 }
 
 export async function PATCH(
