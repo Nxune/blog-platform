@@ -10,7 +10,10 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     await requireAdmin();
-  } catch {
+  } catch (error) {
+    if (error instanceof Error && error.message === "UNAUTHORIZED") {
+      return NextResponse.json({ error: "请先登录" }, { status: 401 });
+    }
     return NextResponse.json({ error: "无权限" }, { status: 403 });
   }
 
@@ -28,14 +31,17 @@ export async function POST(request: Request) {
     if (error instanceof Error && error.message === "标签已存在") {
       return NextResponse.json({ error: "标签已存在" }, { status: 409 });
     }
-    throw error;
+    return NextResponse.json({ error: "创建标签失败" }, { status: 500 });
   }
 }
 
 export async function DELETE(request: Request) {
   try {
     await requireAdmin();
-  } catch {
+  } catch (error) {
+    if (error instanceof Error && error.message === "UNAUTHORIZED") {
+      return NextResponse.json({ error: "请先登录" }, { status: 401 });
+    }
     return NextResponse.json({ error: "无权限" }, { status: 403 });
   }
 
