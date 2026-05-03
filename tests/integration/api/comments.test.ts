@@ -24,7 +24,7 @@ vi.mock('@/lib/validations', () => ({
   },
 }));
 
-import { getCommentsByPostSlug, createComment, deleteComment, listAllComments } from '@/services/comment.service';
+import { getCommentsByPostSlug, createComment, deleteComment, listAllComments, moderateComment } from '@/services/comment.service';
 import { requireAuth, requireAdmin } from '@/lib/auth-helpers';
 
 const mockComment = {
@@ -57,6 +57,11 @@ async function getAllCommentsHandler() {
 async function deleteCommentHandler() {
   const { DELETE } = await import('@/app/api/comments/[id]/route');
   return DELETE;
+}
+
+async function moderateCommentHandler() {
+  const { PATCH } = await import('@/app/api/comments/[id]/status/route');
+  return PATCH;
 }
 
 describe('GET /api/posts/[slug]/comments', () => {
@@ -209,5 +214,63 @@ describe('DELETE /api/comments/[id]（管理员）', () => {
       params: Promise.resolve({ id: 'comment-1' }),
     } as any);
     expect(res.status).toBe(403);
+  });
+});
+
+describe('PATCH /api/comments/[id]/status（审核评论）', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('应成功审核评论状态（管理员）', async () => {
+    vi.mocked(requireAdmin).mockResolvedValue({ user: { id: 'admin-1' } } as any);
+    vi.mocked(moderateComment).mockResolvedValue({ ...mockComment, status: 'APPROVED' } as any);
+
+    const handler = await moderateCommentHandler();
+    const res = await handler(new Request('http://localhost:3000/api/comments/comment-1/status', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'APPROVED' }),
+    }), { params: Promise.resolve({ id: 'comment-1' }) } as any);
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.status).toBe('APPROVED');
+  });
+
+  it('应拒绝非管理员并返回 403', async () => {
+    vi.mocked(requireAdmin).mockRejectedValue(new Error('FORBIDDEN'));
+
+    const handler = await moderateCommentHandler();
+    const res = await handler(new Request('http://localhost:3000/api/comments/comment-1/status', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'APPROVED' }),
+    }), { params: Promise.resolve({ id: 'comment-1' }) } as any);
+    expect(res.status).toBe(403);
+  });
+
+  it('应拒绝无效状态值并返回 400', async () => {
+    vi.mocked(requireAdmin).mockResolvedValue({ user: { id: 'admin-1' } } as any);
+
+    const handler = await moderateCommentHandler();
+    const res = await handler(new Request('http://localhost:3000/api/comments/comment-1/status', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'INVALID_STATUS' }),
+    }), { params: Promise.resolve({ id: 'comment-1' }) } as any);
+    expect(res.status).toBe(400);
+  });
+
+  it('应支持标记为 SPAM', async () => {
+    vi.mocked(requireAdmin).mockResolvedValue({ user: { id: 'admin-1' } } as any);
+    vi.mocked(moderateComment).mockResolvedValue({ ...mockComment, status: 'SPAM' } as any);
+
+    const handler = await moderateCommentHandler();
+    const res = await handler(new Request('http://localhost:3000/api/comments/comment-1/status', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'SPAM' }),
+    }), { params: Promise.resolve({ id: 'comment-1' }) } as any);
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.status).toBe('SPAM');
   });
 });
