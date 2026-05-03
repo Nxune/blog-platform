@@ -9,14 +9,17 @@ export default function SearchPage() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     if (!query.trim()) {
       setPosts([]);
       setHasSearched(false);
+      setError("");
       return;
     }
 
+    setError("");
     const timer = setTimeout(async () => {
       setIsLoading(true);
       try {
@@ -24,9 +27,13 @@ export default function SearchPage() {
         if (res.ok) {
           const data = await res.json();
           setPosts(data.posts);
+        } else {
+          setError("搜索请求失败，请稍后重试");
+          setPosts([]);
         }
       } catch {
-        // ignore
+        setError("网络错误，请检查连接后重试");
+        setPosts([]);
       } finally {
         setIsLoading(false);
         setHasSearched(true);
@@ -51,8 +58,16 @@ export default function SearchPage() {
       />
 
       {isLoading && (
-        <p className="text-center text-muted-foreground">搜索中...</p>
+        <div className="flex items-center justify-center gap-2 text-muted-foreground">
+          <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+          </svg>
+          <p className="text-sm">搜索中...</p>
+        </div>
       )}
+
+      {error && <p className="text-center text-sm text-destructive">{error}</p>}
 
       {!isLoading && hasSearched && posts.length === 0 && (
         <p className="text-center text-muted-foreground">
