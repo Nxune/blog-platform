@@ -17,6 +17,7 @@ export interface Post {
     name: string | null;
     email: string;
     image: string | null;
+    username: string | null;
   };
   tags: {
     tag: {

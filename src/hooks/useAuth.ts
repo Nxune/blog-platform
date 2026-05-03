@@ -11,10 +11,13 @@ export function useAuth() {
     ? {
         id: session.user.id ?? "",
         name: session.user.name ?? "",
+        username: (rawUser?.username as string) ?? null,
         email: session.user.email ?? "",
         image: session.user.image ?? null,
         role: (rawUser?.role as UserProfile["role"]) ?? "USER",
-        bio: null,
+        bio: (rawUser?.bio as string) ?? null,
+        website: (rawUser?.website as string) ?? null,
+        location: (rawUser?.location as string) ?? null,
         createdAt: new Date(),
       }
     : undefined;
