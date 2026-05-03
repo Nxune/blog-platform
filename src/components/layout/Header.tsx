@@ -21,7 +21,7 @@ export function Header() {
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
         <div className="flex items-center gap-8">
           <Link href="/" className="text-xl font-bold">
-            AI Coding
+            Nexus
           </Link>
           <nav className="hidden items-center gap-6 md:flex">
             <Link href="/blog" className="text-sm text-muted-foreground hover:text-foreground">

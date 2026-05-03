@@ -26,9 +26,9 @@ export default async function HomePage() {
   return (
     <div className="mx-auto max-w-6xl px-4 py-12">
       <section className="py-20 text-center">
-        <h1 className="mb-4 text-4xl font-bold tracking-tight">AI Coding 开发者社区</h1>
+        <h1 className="mb-4 text-4xl font-bold tracking-tight">Nexus Community Engine</h1>
         <p className="mb-8 text-lg text-muted-foreground">
-          分享技术见解，交流编程经验，一起探索 AI 与代码的无限可能
+          自托管 · 低占用 · AI 原生 · 联邦互联的下一代社区引擎
         </p>
         <div className="flex items-center justify-center gap-4">
           <Link

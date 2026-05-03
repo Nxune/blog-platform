@@ -17,10 +17,10 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "AI Coding",
-    template: "%s | AI Coding",
+    default: "Nexus Community",
+    template: "%s | Nexus",
   },
-  description: "AI Coding 开发者社区 — 分享技术文章，交流编程心得",
+  description: "Nexus Community Engine — 自托管 · 低占用 · AI 原生 · 联邦互联的下一代社区引擎",
 };
 
 export default function RootLayout({

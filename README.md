@@ -1,6 +1,8 @@
-# AI Coding
+# Nexus Community Engine
 
-> 面向开发者的技术社区 — 分享见解，交流经验，探索 AI 与代码的无限可能。
+> 自托管 · 低占用 · AI 原生 · 联邦互联 · 零信任安全的下一代社区引擎
+
+**v1.0** — 生产可用 | **v2.0** — 开发中（Passkey · ActivityPub · AI 原生）
 
 [![Next.js](https://img.shields.io/badge/Next.js-16-black)](https://nextjs.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-blue)](https://www.typescriptlang.org)
