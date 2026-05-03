@@ -1,7 +1,6 @@
 // @vitest-environment node
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-// Mocks must be at top level, hoisted by vitest
 vi.mock('@/lib/auth', () => ({
   auth: {
     api: {
@@ -31,49 +30,107 @@ const mockUser = {
   name: '测试用户',
   email: 'test@example.com',
   image: null,
-  role: 'USER',
+  role: 'USER' as const,
   bio: '博主简介',
   createdAt: new Date('2026-05-03'),
 };
+
+async function getHandler() {
+  const { GET } = await import('@/app/api/auth/profile/route');
+  return GET;
+}
+
+async function patchHandler() {
+  const { PATCH } = await import('@/app/api/auth/profile/route');
+  return PATCH;
+}
 
 describe('GET /api/auth/profile', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it('应返回已登录用户的资料', async () => {
+  it('应返回已登录用户的资料（200）', async () => {
     vi.mocked(auth.api.getSession).mockResolvedValue({
       user: { id: 'user-1', email: 'test@example.com' },
       session: { id: 'sess-1', expiresAt: new Date(), token: 'tok' },
     } as any);
     vi.mocked(prisma.user.findUnique).mockResolvedValue(mockUser as any);
 
-    const { GET } = await import('./profile.test');
-    // Integration test placeholder - actual implementation will call the route handler
-    expect(true).toBe(true);
+    const handler = await getHandler();
+    const response = await handler();
+    const data = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(data.name).toBe('测试用户');
+    expect(data.email).toBe('test@example.com');
   });
 
   it('应拒绝未认证请求并返回 401', async () => {
     vi.mocked(auth.api.getSession).mockResolvedValue(null);
 
-    expect(true).toBe(true);
+    const handler = await getHandler();
+    const response = await handler();
+    const data = await response.json();
+
+    expect(response.status).toBe(401);
+    expect(data.error).toBe('未登录');
   });
 
   it('不应返回密码字段', async () => {
-    expect(true).toBe(true);
+    vi.mocked(auth.api.getSession).mockResolvedValue({
+      user: { id: 'user-1', email: 'test@example.com' },
+      session: { id: 'sess-1', expiresAt: new Date(), token: 'tok' },
+    } as any);
+    vi.mocked(prisma.user.findUnique).mockResolvedValue(mockUser as any);
+
+    const handler = await getHandler();
+    const data = await (await handler()).json();
+
+    expect(data).not.toHaveProperty('password');
   });
 });
 
 describe('PATCH /api/auth/profile', () => {
-  it('应成功更新用户资料', async () => {
-    expect(true).toBe(true);
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('应成功更新用户资料并返回 200', async () => {
+    vi.mocked(auth.api.getSession).mockResolvedValue({
+      user: { id: 'user-1', email: 'test@example.com' },
+      session: { id: 'sess-1', expiresAt: new Date(), token: 'tok' },
+    } as any);
+    const updatedUser = { ...mockUser, name: '新名字', bio: '新简介' };
+    vi.mocked(prisma.user.update).mockResolvedValue(updatedUser as any);
+
+    const handler = await patchHandler();
+    const request = new Request('http://localhost:3000/api/auth/profile', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: '新名字', bio: '新简介' }),
+    });
+    const response = await handler(request);
+    const data = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(data.name).toBe('新名字');
+    expect(data.bio).toBe('新简介');
   });
 
   it('应拒绝未认证请求并返回 401', async () => {
-    expect(true).toBe(true);
-  });
+    vi.mocked(auth.api.getSession).mockResolvedValue(null);
 
-  it('应拒绝空 name 字段', async () => {
-    expect(true).toBe(true);
+    const handler = await patchHandler();
+    const request = new Request('http://localhost:3000/api/auth/profile', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: '新名字' }),
+    });
+    const response = await handler(request);
+    const data = await response.json();
+
+    expect(response.status).toBe(401);
+    expect(data.error).toBe('未登录');
   });
 });

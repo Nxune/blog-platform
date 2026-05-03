@@ -16,7 +16,8 @@ export async function requireAuth() {
 export async function requireAdmin() {
   const session = await requireAuth();
 
-  if (session.user.role !== "ADMIN") {
+  const role = (session.user as Record<string, unknown>).role;
+  if (role !== "ADMIN") {
     throw new Error("FORBIDDEN");
   }
 
