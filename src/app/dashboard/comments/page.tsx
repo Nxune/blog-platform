@@ -193,6 +193,7 @@ export default function DashboardCommentsPage() {
                     checked={selectAll && data.comments.length > 0}
                     onChange={toggleSelectAll}
                     className="rounded border-gray-300"
+                    aria-label="全选评论"
                   />
                 </th>
                 <th className="px-4 py-3 text-left font-medium">内容</th>
@@ -211,6 +212,7 @@ export default function DashboardCommentsPage() {
                       checked={selectedIds.has(comment.id)}
                       onChange={() => toggleSelect(comment.id)}
                       className="rounded border-gray-300"
+                      aria-label={`选择评论: ${comment.content.slice(0, 30)}`}
                     />
                   </td>
                   <td className="max-w-xs truncate px-4 py-3">

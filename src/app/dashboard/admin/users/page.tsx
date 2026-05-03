@@ -245,6 +245,7 @@ export default function AdminUsersPage() {
                     }
                     onChange={toggleSelectAll}
                     className="rounded border-gray-300"
+                    aria-label="全选用户"
                   />
                 </th>
                 <th className="px-4 py-3 text-left font-medium">用户</th>
@@ -271,6 +272,7 @@ export default function AdminUsersPage() {
                         onChange={() => toggleSelect(user.id)}
                         disabled={!canManage}
                         className="rounded border-gray-300"
+                        aria-label={`选择用户: ${user.name || user.email}`}
                       />
                     </td>
                     <td className="px-4 py-3 font-medium">
@@ -365,9 +367,9 @@ export default function AdminUsersPage() {
       )}
 
       {modalAction && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" role="dialog" aria-modal="true" aria-labelledby="confirm-modal-title">
           <div className="w-full max-w-sm rounded-lg bg-background p-6 shadow-lg">
-            <h3 className="mb-2 text-lg font-semibold">
+            <h3 id="confirm-modal-title" className="mb-2 text-lg font-semibold">
               {modalAction.type === "role"
                 ? "确认修改角色"
                 : modalAction.type === "delete"

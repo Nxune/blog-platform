@@ -63,6 +63,9 @@ export function Header() {
               <button
                 onClick={() => setMenuOpen(!menuOpen)}
                 className="flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm hover:bg-muted"
+                aria-haspopup="true"
+                aria-expanded={menuOpen}
+                aria-label="用户菜单"
               >
                 <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-xs font-medium text-primary">
                   {(user.name ?? user.email ?? "?").charAt(0).toUpperCase()}

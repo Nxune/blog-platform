@@ -47,6 +47,7 @@ export default function SearchPage() {
         placeholder="搜索文章..."
         className="mb-8 w-full rounded-lg border px-4 py-3 text-lg outline-none focus:ring-2 focus:ring-primary"
         autoFocus
+        aria-label="搜索文章"
       />
 
       {isLoading && (

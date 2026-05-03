@@ -36,6 +36,7 @@ function CommentCard({
         type="button"
         onClick={() => onReply(comment.id)}
         className="text-xs text-muted-foreground hover:text-primary"
+        aria-label={`回复 ${comment.author.name || comment.author.email}`}
       >
         回复
       </button>
