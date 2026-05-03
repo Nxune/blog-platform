@@ -17,12 +17,15 @@ export async function POST(request: Request) {
 
     const hashedPassword = await hash(password, 12);
 
+    const userCount = await prisma.user.count();
+    const role = userCount === 0 ? "SUPER_ADMIN" : "USER";
+
     await prisma.user.create({
       data: {
         name,
         email,
         password: hashedPassword,
-        role: "USER",
+        role,
       },
     });
 

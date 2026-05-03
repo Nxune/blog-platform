@@ -17,6 +17,7 @@ export function Editor({ initialContent = "", onChange, placeholder }: EditorPro
   const [isPreview, setIsPreview] = useState(false);
 
   const editor = useEditor({
+    immediatelyRender: false,
     extensions: [
       StarterKit,
       Placeholder.configure({
@@ -30,7 +31,6 @@ export function Editor({ initialContent = "", onChange, placeholder }: EditorPro
     editorProps: {
       attributes: {
         class: "prose prose-sm max-w-none p-4 focus:outline-none min-h-[360px]",
-        placeholder: placeholder ?? "开始写作...",
       },
     },
   });
