@@ -15,6 +15,9 @@ vi.mock('@/lib/prisma', () => ({
       update: vi.fn(),
       delete: vi.fn(),
     },
+    auditLog: {
+      create: vi.fn(),
+    },
   },
 }));
 
@@ -23,10 +26,22 @@ vi.mock('@/lib/auth-helpers', () => ({
   getUserId: vi.fn(),
 }));
 
-vi.mock('bcryptjs', () => ({
-  compare: vi.fn(),
-  hash: vi.fn(),
+vi.mock('@/services/audit.service', () => ({
+  logAuditAction: vi.fn(),
 }));
+
+const mockCompare = vi.fn();
+const mockHash = vi.fn();
+
+vi.mock('bcryptjs', () => {
+  const c = vi.fn();
+  const h = vi.fn();
+  return {
+    default: { compare: c, hash: h },
+    compare: c,
+    hash: h,
+  };
+});
 
 import { prisma } from '@/lib/prisma';
 import { requireSuperAdmin, getUserId } from '@/lib/auth-helpers';

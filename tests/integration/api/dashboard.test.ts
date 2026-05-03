@@ -24,6 +24,10 @@ vi.mock('@/lib/prisma', () => ({
     },
     comment: { count: vi.fn() },
     tag: { count: vi.fn() },
+    user: {
+      count: vi.fn(),
+      findMany: vi.fn(),
+    },
   },
 }));
 
@@ -42,6 +46,11 @@ async function renderDashboardPosts() {
 
 const adminSession = {
   user: { id: 'admin-1', name: 'Admin', email: 'admin@test.com', role: 'ADMIN' },
+  expires: new Date(Date.now() + 86400000).toISOString(),
+};
+
+const superAdminSession = {
+  user: { id: 'super-1', name: 'Super', email: 'super@test.com', role: 'SUPER_ADMIN' },
   expires: new Date(Date.now() + 86400000).toISOString(),
 };
 
@@ -120,6 +129,75 @@ describe('Dashboard 概览页 (/dashboard)', () => {
     expect(prisma.post.aggregate).toHaveBeenCalledWith(
       { _sum: { viewCount: true } }
     );
+  });
+
+  it('SUPER_ADMIN 应能看到完整管理统计', async () => {
+    vi.mocked(auth).mockResolvedValue(superAdminSession as any);
+    vi.mocked(prisma.post.count).mockResolvedValue(10);
+    vi.mocked(prisma.comment.count).mockResolvedValue(25);
+    vi.mocked(prisma.tag.count).mockResolvedValue(5);
+    vi.mocked(prisma.user.count).mockResolvedValue(100);
+    vi.mocked(prisma.post.aggregate).mockResolvedValue({
+      _sum: { viewCount: 1000 },
+    } as any);
+    vi.mocked(prisma.user.findMany).mockResolvedValue([]);
+
+    const element = await renderDashboard();
+    expect(element).toBeTruthy();
+
+    // SUPER_ADMIN triggers user.count for 注册用户 stat card
+    expect(prisma.user.count).toHaveBeenCalledWith();
+  });
+
+  it('SUPER_ADMIN 应能查看最近注册用户', async () => {
+    vi.mocked(auth).mockResolvedValue(superAdminSession as any);
+    vi.mocked(prisma.post.count).mockResolvedValue(10);
+    vi.mocked(prisma.comment.count).mockResolvedValue(25);
+    vi.mocked(prisma.tag.count).mockResolvedValue(5);
+    vi.mocked(prisma.user.count).mockResolvedValue(100);
+    vi.mocked(prisma.post.aggregate).mockResolvedValue({
+      _sum: { viewCount: 1000 },
+    } as any);
+    const mockUsers = [
+      { id: 'u1', name: '用户A', email: 'a@test.com', role: 'USER', createdAt: new Date() },
+    ];
+    vi.mocked(prisma.user.findMany).mockResolvedValue(mockUsers as any);
+
+    await renderDashboard();
+
+    expect(prisma.user.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ take: 5, orderBy: { createdAt: 'desc' } })
+    );
+  });
+
+  it('ADMIN 不应查询 user.count 或 user.findMany', async () => {
+    vi.mocked(auth).mockResolvedValue(adminSession as any);
+    vi.mocked(prisma.post.count).mockResolvedValue(10);
+    vi.mocked(prisma.comment.count).mockResolvedValue(25);
+    vi.mocked(prisma.tag.count).mockResolvedValue(5);
+    vi.mocked(prisma.post.aggregate).mockResolvedValue({
+      _sum: { viewCount: 1000 },
+    } as any);
+
+    await renderDashboard();
+
+    expect(prisma.user.count).not.toHaveBeenCalled();
+    expect(prisma.user.findMany).not.toHaveBeenCalled();
+  });
+
+  it('USER 不应查询 user.count 或 user.findMany', async () => {
+    vi.mocked(auth).mockResolvedValue(userSession as any);
+    vi.mocked(prisma.post.count).mockResolvedValue(3);
+    vi.mocked(prisma.comment.count).mockResolvedValue(7);
+    vi.mocked(prisma.tag.count).mockResolvedValue(5);
+    vi.mocked(prisma.post.aggregate).mockResolvedValue({
+      _sum: { viewCount: 150 },
+    } as any);
+
+    await renderDashboard();
+
+    expect(prisma.user.count).not.toHaveBeenCalled();
+    expect(prisma.user.findMany).not.toHaveBeenCalled();
   });
 
   it('未登录用户应被重定向到 /login', async () => {
