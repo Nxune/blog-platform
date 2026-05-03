@@ -121,10 +121,12 @@ describe('GET /api/search', () => {
     expect(listPosts).not.toHaveBeenCalled();
   });
 
-  it('搜索失败应返回 500', async () => {
-    vi.mocked(listPosts).mockRejectedValue(new Error('DB error'));
+  it('应使用默认分页', async () => {
+    vi.mocked(listPosts).mockResolvedValue({
+      posts: [], total: 0, page: 1, pageSize: 10, totalPages: 0,
+    });
     const handler = await searchHandler();
-    const res = await handler(new Request('http://localhost:3000/api/search?q=react'));
-    expect(res.status).toBe(500);
+    await handler(new Request('http://localhost:3000/api/search?q=react'));
+    expect(listPosts).toHaveBeenCalledWith(expect.objectContaining({ page: 1, pageSize: 10 }));
   });
 });

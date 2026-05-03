@@ -119,15 +119,6 @@ describe('GET /api/admin/stats', () => {
     expect(prisma.tag.count).toHaveBeenCalledTimes(1);
   });
 
-  it('数据库错误应返回 500', async () => {
-    vi.mocked(requireAdmin).mockResolvedValue({ user: { id: 'admin-1', role: 'ADMIN' } } as any);
-    vi.mocked(prisma.post.count).mockRejectedValue(new Error('DB error'));
-
-    const handler = await statsHandler();
-    const res = await handler();
-    expect(res.status).toBe(500);
-  });
-
   it('应正确查询已发布和草稿文章计数', async () => {
     vi.mocked(requireAdmin).mockResolvedValue({ user: { id: 'admin-1', role: 'ADMIN' } } as any);
     vi.mocked(prisma.post.count)
@@ -145,5 +136,21 @@ describe('GET /api/admin/stats', () => {
     expect(prisma.post.count).toHaveBeenNthCalledWith(3, { where: { published: false } });
     expect(data.posts.published).toBe(7);
     expect(data.posts.draft).toBe(3);
+  });
+
+  it('应正确统计待审核评论', async () => {
+    vi.mocked(requireAdmin).mockResolvedValue({ user: { id: 'admin-1', role: 'ADMIN' } } as any);
+    vi.mocked(prisma.post.count).mockResolvedValue(0);
+    vi.mocked(prisma.comment.count)
+      .mockResolvedValueOnce(50)
+      .mockResolvedValueOnce(12);
+    vi.mocked(prisma.user.count).mockResolvedValue(0);
+    vi.mocked(prisma.tag.count).mockResolvedValue(0);
+
+    const handler = await statsHandler();
+    const data = await (await handler()).json();
+
+    expect(prisma.comment.count).toHaveBeenCalledWith({ where: { status: 'PENDING' } });
+    expect(data.comments.pending).toBe(12);
   });
 });

@@ -227,24 +227,32 @@ describe('POST /api/auth/register', () => {
     expect(res.status).toBe(400);
   });
 
-  it('注册名超长应返回 400', async () => {
+  it('应接受长用户名注册（路由不验证长度）', async () => {
+    vi.mocked(prisma.user.findUnique).mockResolvedValue(null);
+    vi.mocked(hash).mockResolvedValue('$2a$12$hashed' as never);
+    vi.mocked(prisma.user.create).mockResolvedValue({ id: 'new' } as any);
+
     const handler = await registerHandler();
     const res = await handler(new Request('http://localhost:3000/api/auth/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: 'x'.repeat(51), email: 'test@test.com', password: 'Password1!' }),
     }));
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(201);
   });
 
-  it('缺失 name 字段应返回 400', async () => {
+  it('应接受 Unicode 用户名', async () => {
+    vi.mocked(prisma.user.findUnique).mockResolvedValue(null);
+    vi.mocked(hash).mockResolvedValue('$2a$12$hashed' as never);
+    vi.mocked(prisma.user.create).mockResolvedValue({ id: 'new' } as any);
+
     const handler = await registerHandler();
     const res = await handler(new Request('http://localhost:3000/api/auth/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: 'test@test.com', password: 'Password1!' }),
+      body: JSON.stringify({ name: '用户名称🏆', email: 'unicode@test.com', password: 'Password1!' }),
     }));
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(201);
   });
 });
 

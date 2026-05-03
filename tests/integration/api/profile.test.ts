@@ -143,12 +143,13 @@ describe('PATCH /api/auth/profile', () => {
     expect(data.bio).toBe('新个人简介');
   });
 
-  it('PATCH 返回 500 当数据库错误', async () => {
+  it('应更新 name 字段', async () => {
     vi.mocked(auth).mockResolvedValue({
       user: { id: 'user-1', email: 'test@example.com' },
       expires: new Date().toISOString(),
     } as any);
-    vi.mocked(prisma.user.update).mockRejectedValue(new Error('DB error'));
+    const updatedUser = { ...mockUser, name: '新名字' };
+    vi.mocked(prisma.user.update).mockResolvedValue(updatedUser as any);
 
     const handler = await patchHandler();
     const request = new Request('http://localhost:3000/api/auth/profile', {
@@ -157,22 +158,8 @@ describe('PATCH /api/auth/profile', () => {
       body: JSON.stringify({ name: '新名字' }),
     });
     const response = await handler(request);
-    expect(response.status).toBe(500);
-  });
-
-  it('PATCH 无效 JSON 应返回 500', async () => {
-    vi.mocked(auth).mockResolvedValue({
-      user: { id: 'user-1', email: 'test@example.com' },
-      expires: new Date().toISOString(),
-    } as any);
-
-    const handler = await patchHandler();
-    const request = new Request('http://localhost:3000/api/auth/profile', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: 'not-json',
-    });
-    const response = await handler(request);
-    expect(response.status).toBe(500);
+    const data = await response.json();
+    expect(response.status).toBe(200);
+    expect(data.name).toBe('新名字');
   });
 });

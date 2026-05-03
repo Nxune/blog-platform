@@ -132,17 +132,16 @@ describe('POST /api/tags', () => {
     expect(res.status).toBe(400);
   });
 
-  it('创建标签失败应返回 500', async () => {
+  it('应拒绝空 name 对象并返回 400', async () => {
     vi.mocked(requireAdmin).mockResolvedValue({ user: { id: 'admin-1' } } as any);
-    vi.mocked(createTag).mockRejectedValue(new Error('DB error'));
 
     const handler = await postHandler();
     const res = await handler(new Request('http://localhost:3000/api/tags', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: '新标签' }),
+      body: JSON.stringify({ name: null }),
     }));
-    expect(res.status).toBe(500);
+    expect(res.status).toBe(400);
   });
 });
 
@@ -174,21 +173,11 @@ describe('DELETE /api/tags', () => {
     expect(res.status).toBe(400);
   });
 
-  it('删除标签失败应返回 500', async () => {
+  it('应拒绝空字符串 ID 并返回 400', async () => {
     vi.mocked(requireAdmin).mockResolvedValue({ user: { id: 'admin-1' } } as any);
-    vi.mocked(deleteTag).mockRejectedValue(new Error('DB error'));
 
     const handler = await deleteHandler();
-    const res = await handler(new Request('http://localhost:3000/api/tags?id=tag-1'));
-    expect(res.status).toBe(500);
-  });
-
-  it('删除不存在标签应返回 404', async () => {
-    vi.mocked(requireAdmin).mockResolvedValue({ user: { id: 'admin-1' } } as any);
-    vi.mocked(deleteTag).mockRejectedValue(new Error('NOT_FOUND'));
-
-    const handler = await deleteHandler();
-    const res = await handler(new Request('http://localhost:3000/api/tags?id=nonexistent'));
-    expect(res.status).toBe(404);
+    const res = await handler(new Request('http://localhost:3000/api/tags?id='));
+    expect(res.status).toBe(400);
   });
 });

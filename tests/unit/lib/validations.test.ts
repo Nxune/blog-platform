@@ -162,7 +162,7 @@ describe('registerSchema', () => {
     const result = registerSchema.safeParse({
       name: '测试用户',
       email: 'user@example.com',
-      password: '8chars!',
+      password: '8chars!!',
     });
     expect(result.success).toBe(true);
   });

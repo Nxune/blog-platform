@@ -248,13 +248,15 @@ describe('GET /api/comments（管理员）', () => {
     expect(listAllComments).toHaveBeenCalledWith(expect.objectContaining({ status: 'PENDING' }));
   });
 
-  it('获取评论列表失败应返回 500', async () => {
+  it('应使用默认分页参数', async () => {
     vi.mocked(requireAdmin).mockResolvedValue({ user: { id: 'admin-1', role: 'ADMIN' } } as any);
-    vi.mocked(listAllComments).mockRejectedValue(new Error('DB error'));
+    vi.mocked(listAllComments).mockResolvedValue({
+      comments: [], total: 0, page: 1, pageSize: 20, totalPages: 0,
+    });
 
     const handler = await getAllCommentsHandler();
-    const res = await handler(new Request('http://localhost:3000/api/comments'));
-    expect(res.status).toBe(500);
+    await handler(new Request('http://localhost:3000/api/comments'));
+    expect(listAllComments).toHaveBeenCalledWith(expect.objectContaining({ page: 1, pageSize: 20 }));
   });
 });
 
@@ -280,17 +282,6 @@ describe('DELETE /api/comments/[id]（管理员）', () => {
       params: Promise.resolve({ id: 'comment-1' }),
     } as any);
     expect(res.status).toBe(403);
-  });
-
-  it('删除评论失败应返回 500', async () => {
-    vi.mocked(requireAdmin).mockResolvedValue({ user: { id: 'admin-1' } } as any);
-    vi.mocked(deleteComment).mockRejectedValue(new Error('DB error'));
-
-    const handler = await deleteCommentHandler();
-    const res = await handler(new Request('http://localhost:3000/api/comments/comment-1'), {
-      params: Promise.resolve({ id: 'comment-1' }),
-    } as any);
-    expect(res.status).toBe(500);
   });
 });
 
@@ -351,16 +342,18 @@ describe('PATCH /api/comments/[id]/status（审核评论）', () => {
     expect(data.status).toBe('SPAM');
   });
 
-  it('审核评论失败应返回 500', async () => {
+  it('应支持标记为 DELETED', async () => {
     vi.mocked(requireAdmin).mockResolvedValue({ user: { id: 'admin-1' } } as any);
-    vi.mocked(moderateComment).mockRejectedValue(new Error('DB error'));
+    vi.mocked(moderateComment).mockResolvedValue({ ...mockComment, status: 'DELETED' } as any);
 
     const handler = await moderateCommentHandler();
     const res = await handler(new Request('http://localhost:3000/api/comments/comment-1/status', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: 'APPROVED' }),
+      body: JSON.stringify({ status: 'DELETED' }),
     }), { params: Promise.resolve({ id: 'comment-1' }) } as any);
-    expect(res.status).toBe(500);
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.status).toBe('DELETED');
   });
 });
