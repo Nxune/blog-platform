@@ -36,6 +36,7 @@ model User {
   comments      Comment[]
   accounts      Account[]
   sessions      Session[]
+  credentials   Credential[]
 }
 
 model Post {
@@ -146,4 +147,25 @@ model VerificationToken {
   expires    DateTime
 
   @@unique([identifier, token])
+}
+
+model Credential {
+  id         String   @id
+  userId     String
+  publicKey  String
+  counter    Int      @default(0)
+  backedUp   Boolean  @default(false)
+  transports String?
+  createdAt  DateTime @default(now())
+  lastUsed   DateTime @default(now())
+
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Challenge {
+  id        String   @id @default(cuid())
+  userId    String?
+  challenge String
+  expires   DateTime
+  createdAt DateTime @default(now())
 }

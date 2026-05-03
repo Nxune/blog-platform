@@ -3,6 +3,7 @@ import Credentials from "next-auth/providers/credentials";
 import GitHub from "next-auth/providers/github";
 import Google from "next-auth/providers/google";
 import { PrismaAdapter } from "@auth/prisma-adapter";
+import { rateLimit } from "./rate-limit";
 import { compare } from "bcryptjs";
 import { prisma } from "./prisma";
 
@@ -19,9 +20,16 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
       },
-      async authorize(credentials) {
+      async authorize(credentials, request) {
         if (!credentials?.email || !credentials?.password) {
           return null;
+        }
+
+        // Rate limit: 5 attempts per email per minute
+        const ip = (request as unknown as { headers?: { get: (k: string) => string | null } })?.headers?.get?.("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+        const rl = rateLimit(`login:${credentials.email}:${ip}`, { windowMs: 60_000, max: 5 });
+        if (!rl.success) {
+          throw new Error("RATE_LIMITED");
         }
 
         const user = await prisma.user.findUnique({

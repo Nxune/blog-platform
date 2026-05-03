@@ -30,6 +30,8 @@
     "@auth/prisma-adapter": "^2.11.2",
     "@base-ui/react": "^1.4.1",
     "@prisma/client": "^6.19.3",
+    "@simplewebauthn/browser": "^13.3.0",
+    "@simplewebauthn/server": "^13.3.0",
     "@tiptap/extension-code-block-lowlight": "^3.22.5",
     "@tiptap/extension-image": "^3.22.5",
     "@tiptap/extension-link": "^3.22.5",
