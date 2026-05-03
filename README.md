@@ -6,6 +6,9 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-blue)](https://www.typescriptlang.org)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Tests](https://img.shields.io/badge/tests-260%2B-passing)](tests/)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](docs/CONTRIBUTING.md)
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FNxune%2Fblog-platform&env=AUTH_SECRET,AUTH_URL&envDescription=必填环境变量&envLink=https%3A%2F%2Fgithub.com%2FNxune%2Fblog-platform%23环境变量)
 
 ---
 
