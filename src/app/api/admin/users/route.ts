@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireSuperAdmin } from "@/lib/auth-helpers";
+import { logAuditAction } from "@/services/audit.service";
 
 export async function GET(request: Request) {
   try {
@@ -13,9 +14,19 @@ export async function GET(request: Request) {
       100,
       Math.max(1, Number(searchParams.get("pageSize")) || 20)
     );
+    const search = searchParams.get("search") || "";
+
+    const where: Record<string, unknown> = {};
+    if (search) {
+      where.OR = [
+        { email: { contains: search } },
+        { name: { contains: search } },
+      ];
+    }
 
     const [users, total] = await Promise.all([
       prisma.user.findMany({
+        where,
         select: {
           id: true,
           name: true,
@@ -28,14 +39,20 @@ export async function GET(request: Request) {
         skip: (page - 1) * pageSize,
         take: pageSize,
       }),
-      prisma.user.count(),
+      prisma.user.count({ where }),
     ]);
 
     console.log(
-      `[SuperAdmin] ${adminId} 查询用户列表 (page=${page}, pageSize=${pageSize})`
+      `[SuperAdmin] ${adminId} 查询用户列表 (page=${page}, pageSize=${pageSize}, search=${search || "-"})`
     );
 
-    return NextResponse.json({ users, total, page, pageSize, totalPages: Math.ceil(total / pageSize) });
+    return NextResponse.json({
+      users,
+      total,
+      page,
+      pageSize,
+      totalPages: Math.ceil(total / pageSize),
+    });
   } catch (error) {
     if (error instanceof Error && error.message === "FORBIDDEN") {
       return NextResponse.json({ error: "无权限" }, { status: 403 });
