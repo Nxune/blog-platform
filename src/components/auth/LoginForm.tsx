@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { signIn } from "@/lib/auth-client";
 
 export function LoginForm() {
@@ -64,6 +65,14 @@ export function LoginForm() {
           required
           className="mt-1 w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary"
         />
+        <div className="mt-1 text-right">
+          <Link
+            href="/forgot-password"
+            className="text-xs text-muted-foreground hover:text-primary hover:underline"
+          >
+            忘记密码？
+          </Link>
+        </div>
       </div>
 
       {error && <p className="text-sm text-destructive">{error}</p>}
