@@ -3,21 +3,25 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AuthGuard } from "@/components/auth/AuthGuard";
+import { useAuth } from "@/hooks/useAuth";
 
 interface DashboardShellProps {
   children: React.ReactNode;
 }
 
-const navItems = [
-  { href: "/dashboard", label: "概览" },
-  { href: "/dashboard/posts", label: "帖子" },
-  { href: "/dashboard/comments", label: "评论" },
-  { href: "/dashboard/tags", label: "标签" },
-  { href: "/dashboard/settings", label: "设置" },
-];
-
 export function DashboardShell({ children }: DashboardShellProps) {
   const pathname = usePathname();
+  const { user } = useAuth();
+  const isSuperAdmin = user?.role === "SUPER_ADMIN";
+
+  const navItems = [
+    { href: "/dashboard", label: "概览" },
+    { href: "/dashboard/posts", label: "帖子" },
+    { href: "/dashboard/comments", label: "评论" },
+    { href: "/dashboard/tags", label: "标签" },
+    ...(isSuperAdmin ? [{ href: "/dashboard/admin/users", label: "用户管理" }] : []),
+    { href: "/dashboard/settings", label: "设置" },
+  ];
 
   return (
     <AuthGuard>
@@ -29,7 +33,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
                 key={href}
                 href={href}
                 className={`block rounded-lg px-3 py-2 text-sm ${
-                  pathname === href
+                  pathname === href || (href !== "/dashboard" && pathname.startsWith(href))
                     ? "bg-primary/10 font-medium text-primary"
                     : "text-muted-foreground hover:bg-muted"
                 }`}
