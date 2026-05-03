@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import type { Post } from "@/types/post";
 import { formatDate, truncate } from "@/lib/utils";
@@ -10,11 +11,13 @@ export function PostCard({ post }: PostCardProps) {
   return (
     <article className="group rounded-lg border p-6 transition-shadow hover:shadow-md">
       {post.coverImage && (
-        <div className="mb-4 overflow-hidden rounded-lg">
-          <img
+        <div className="relative mb-4 h-48 w-full overflow-hidden rounded-lg">
+          <Image
             src={post.coverImage}
             alt={post.title}
-            className="h-48 w-full object-cover transition-transform group-hover:scale-105"
+            fill
+            sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 700px"
+            className="object-cover transition-transform group-hover:scale-105"
           />
         </div>
       )}

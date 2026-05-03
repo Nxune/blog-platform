@@ -18,8 +18,10 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  let session;
+
   try {
-    await requireAuth();
+    session = await requireAuth();
   } catch {
     return NextResponse.json({ error: "请先登录" }, { status: 401 });
   }
@@ -27,7 +29,6 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     const parsed = postSchema.parse(body);
-    const session = await requireAuth();
 
     const uid = (session.user as { id: string }).id;
     const post = await createPost({

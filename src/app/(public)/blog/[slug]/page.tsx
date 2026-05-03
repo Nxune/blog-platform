@@ -1,9 +1,10 @@
+import Image from "next/image";
 import { getPostBySlug } from "@/services/post.service";
 import { formatDate, sanitizeHtml } from "@/lib/utils";
 import { CommentSection } from "@/components/comments/CommentSection";
 import { notFound } from "next/navigation";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 60;
 
 interface PostPageProps {
   params: Promise<{ slug: string }>;
@@ -33,11 +34,16 @@ export default async function PostPage({ params }: PostPageProps) {
     <article className="mx-auto max-w-3xl px-4 py-12">
       <header className="mb-8 space-y-4">
         {post.coverImage && (
-          <img
-            src={post.coverImage}
-            alt={post.title}
-            className="mb-6 w-full rounded-lg object-cover"
-          />
+          <div className="relative mb-6 h-64 w-full overflow-hidden rounded-lg sm:h-80">
+            <Image
+              src={post.coverImage}
+              alt={post.title}
+              fill
+              sizes="(max-width: 768px) 100vw, 768px"
+              className="object-cover"
+              priority
+            />
+          </div>
         )}
         <h1 className="text-4xl font-bold tracking-tight">{post.title}</h1>
         <div className="flex items-center gap-4 text-sm text-muted-foreground">

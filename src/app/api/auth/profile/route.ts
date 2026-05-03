@@ -77,6 +77,9 @@ export async function PATCH(request: Request) {
     if (!email || !password) {
       return NextResponse.json({ error: "请填写新邮箱和当前密码" }, { status: 400 });
     }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return NextResponse.json({ error: "请输入有效的邮箱地址" }, { status: 400 });
+    }
 
     const user = await prisma.user.findUnique({
       where: { id: session.user.id },
@@ -107,6 +110,13 @@ export async function PATCH(request: Request) {
 
   // Default: update profile (name, bio)
   const { name, bio } = data;
+  if (name !== undefined && (typeof name !== "string" || name.trim().length < 1 || name.length > 50)) {
+    return NextResponse.json({ error: "用户名长度需在 1-50 字符之间" }, { status: 400 });
+  }
+  if (bio !== undefined && (typeof bio !== "string" || bio.length > 500)) {
+    return NextResponse.json({ error: "个人简介不能超过 500 字符" }, { status: 400 });
+  }
+
   const user = await prisma.user.update({
     where: { id: session.user.id },
     data: { name, bio },

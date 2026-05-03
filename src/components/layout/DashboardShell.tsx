@@ -10,7 +10,7 @@ interface DashboardShellProps {
 
 const navItems = [
   { href: "/dashboard", label: "概览" },
-  { href: "/dashboard/posts", label: "文章" },
+  { href: "/dashboard/posts", label: "帖子" },
   { href: "/dashboard/comments", label: "评论" },
   { href: "/dashboard/tags", label: "标签" },
   { href: "/dashboard/settings", label: "设置" },

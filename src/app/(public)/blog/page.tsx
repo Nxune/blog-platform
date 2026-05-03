@@ -1,7 +1,7 @@
 import { listPosts } from "@/services/post.service";
 import { PostCard } from "@/components/blog/PostCard";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 60;
 
 interface BlogPageProps {
   searchParams: Promise<{ page?: string; tag?: string }>;
@@ -20,10 +20,10 @@ export default async function BlogPage({ searchParams }: BlogPageProps) {
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-12">
-      <h1 className="mb-8 text-3xl font-bold">文章列表</h1>
+      <h1 className="mb-8 text-3xl font-bold">帖子列表</h1>
 
       {posts.length === 0 ? (
-        <p className="py-12 text-center text-muted-foreground">暂无文章</p>
+        <p className="py-12 text-center text-muted-foreground">暂无帖子</p>
       ) : (
         <div className="space-y-6">
           {posts.map((post) => (

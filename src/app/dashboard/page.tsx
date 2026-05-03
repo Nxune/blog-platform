@@ -6,26 +6,38 @@ export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
   const session = await auth();
-  if (
-    !session?.user ||
-    (session.user as Record<string, unknown>).role !== "ADMIN"
-  ) {
+  if (!session?.user) {
     redirect("/login");
   }
 
+  const role = (session.user as Record<string, unknown>).role as string;
+  const userId = (session.user as Record<string, unknown>).id as string;
+  const isAdmin = role === "ADMIN";
+
   const [postCount, commentCount, tagCount, viewCountResult] =
     await Promise.all([
-      prisma.post.count(),
-      prisma.comment.count(),
+      isAdmin
+        ? prisma.post.count()
+        : prisma.post.count({ where: { authorId: userId } }),
+      isAdmin
+        ? prisma.comment.count()
+        : prisma.comment.count({
+            where: { post: { authorId: userId } },
+          }),
       prisma.tag.count(),
-      prisma.post.aggregate({ _sum: { viewCount: true } }),
+      isAdmin
+        ? prisma.post.aggregate({ _sum: { viewCount: true } })
+        : prisma.post.aggregate({
+            where: { authorId: userId },
+            _sum: { viewCount: true },
+          }),
     ]);
 
   const stats = [
-    { label: "文章总数", value: postCount },
-    { label: "评论总数", value: commentCount },
+    { label: isAdmin ? "文章总数" : "我的文章", value: postCount },
+    { label: isAdmin ? "评论总数" : "我的评论", value: commentCount },
     { label: "标签数", value: tagCount },
-    { label: "总阅读量", value: viewCountResult._sum.viewCount ?? 0 },
+    { label: isAdmin ? "总阅读量" : "我的阅读量", value: viewCountResult._sum.viewCount ?? 0 },
   ];
 
   return (

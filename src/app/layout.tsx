@@ -17,10 +17,10 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "Blog Platform",
-    template: "%s | Blog Platform",
+    default: "AI Coding",
+    template: "%s | AI Coding",
   },
-  description: "A modern blog platform built with Next.js",
+  description: "AI Coding 开发者社区 — 分享技术文章，交流编程心得",
 };
 
 export default function RootLayout({

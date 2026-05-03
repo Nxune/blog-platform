@@ -11,11 +11,11 @@ export function Header() {
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
         <div className="flex items-center gap-8">
           <Link href="/" className="text-xl font-bold">
-            Blog
+            AI Coding
           </Link>
           <nav className="hidden items-center gap-6 md:flex">
             <Link href="/blog" className="text-sm text-muted-foreground hover:text-foreground">
-              文章
+              帖子
             </Link>
             <Link href="/tags" className="text-sm text-muted-foreground hover:text-foreground">
               标签
@@ -32,14 +32,12 @@ export function Header() {
           </Link>
           {isAuthenticated ? (
             <div className="flex items-center gap-3">
-              {user?.role === "ADMIN" && (
-                <Link
-                  href="/dashboard"
-                  className="text-sm text-muted-foreground hover:text-foreground"
-                >
-                  管理
-                </Link>
-              )}
+              <Link
+                href="/dashboard"
+                className="text-sm text-muted-foreground hover:text-foreground"
+              >
+                工作台
+              </Link>
               <span className="text-sm text-muted-foreground">{user?.name ?? user?.email}</span>
             </div>
           ) : (
