@@ -8,7 +8,7 @@ export async function GET(request: Request) {
   const params: Parameters<typeof listPosts>[0] = {
     page: Number(searchParams.get("page")) || 1,
     pageSize: Number(searchParams.get("pageSize")) || 10,
-    status: searchParams.get("status") as "PUBLISHED" | "DRAFT" | "ARCHIVED" | undefined,
+    published: searchParams.get("published") === "true" ? true : undefined,
     tag: searchParams.get("tag") || undefined,
     search: searchParams.get("search") || undefined,
   };

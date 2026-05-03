@@ -10,11 +10,13 @@ export async function GET(request: Request) {
   }
 
   const { searchParams } = new URL(request.url);
-  const approvedParam = searchParams.get("approved");
+  const statusParam = searchParams.get("status");
   const params: Parameters<typeof listAllComments>[0] = {
     page: Number(searchParams.get("page")) || 1,
     pageSize: Number(searchParams.get("pageSize")) || 20,
-    isApproved: approvedParam === "true" ? true : approvedParam === "false" ? false : undefined,
+    status: statusParam && ["PENDING", "APPROVED", "SPAM", "DELETED"].includes(statusParam)
+      ? (statusParam as "PENDING" | "APPROVED" | "SPAM" | "DELETED")
+      : undefined,
   };
 
   const result = await listAllComments(params);

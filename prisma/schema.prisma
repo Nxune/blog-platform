@@ -3,79 +3,70 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
 enum Role {
+  USER
   ADMIN
-  AUTHOR
-  READER
 }
 
-enum PostStatus {
-  DRAFT
-  PUBLISHED
-  ARCHIVED
+enum CommentStatus {
+  PENDING
+  APPROVED
+  SPAM
+  DELETED
 }
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  username  String   @unique
-  password  String
-  name      String?
-  avatar    String?
-  role      Role     @default(READER)
-  bio       String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  password      String?
+  role          Role      @default(USER)
+  bio           String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
-  posts    Post[]
-  comments Comment[]
+  posts         Post[]
+  comments      Comment[]
+  accounts      Account[]
+  sessions      Session[]
 }
 
 model Post {
-  id         String     @id @default(cuid())
-  title      String
-  slug       String     @unique
-  content    String
-  excerpt    String?
-  coverImage String?
-  status     PostStatus @default(DRAFT)
-  viewCount  Int        @default(0)
-  createdAt  DateTime   @default(now())
-  updatedAt  DateTime   @updatedAt
+  id          String   @id @default(cuid())
+  title       String
+  slug        String   @unique
+  content     String
+  excerpt     String?
+  coverImage  String?
+  published   Boolean  @default(false)
+  featured    Boolean  @default(false)
+  viewCount   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
   publishedAt DateTime?
 
-  authorId   String
-  author     User       @relation(fields: [authorId], references: [id])
+  authorId    String
+  author      User     @relation(fields: [authorId], references: [id])
 
-  categoryId String?
-  category   Category?  @relation(fields: [categoryId], references: [id])
-
-  tags     PostTag[]
-  comments Comment[]
-}
-
-model Category {
-  id          String @id @default(cuid())
-  name        String @unique
-  slug        String @unique
-  description String?
-
-  posts Post[]
+  tags        TagOnPost[]
+  comments    Comment[]
 }
 
 model Tag {
-  id   String @id @default(cuid())
-  name String @unique
-  slug String @unique
+  id    String @id @default(cuid())
+  name  String @unique
+  slug  String @unique
 
-  posts PostTag[]
+  posts TagOnPost[]
 }
 
-model PostTag {
+model TagOnPost {
   postId String
   tagId  String
   post   Post @relation(fields: [postId], references: [id], onDelete: Cascade)
@@ -85,20 +76,55 @@ model PostTag {
 }
 
 model Comment {
-  id        String   @id @default(cuid())
+  id        String        @id @default(cuid())
   content   String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  isApproved Boolean @default(true)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
 
   authorId String
-  author   User     @relation(fields: [authorId], references: [id])
+  author   User          @relation(fields: [authorId], references: [id])
 
-  postId   String
-  post     Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  postId    String
+  post      Post          @relation(fields: [postId], references: [id], onDelete: Cascade)
 
-  parentId String?
-  parent   Comment? @relation("CommentReplies", fields: [parentId], references: [id])
-  replies  Comment[] @relation("CommentReplies")
+  parentId  String?
+  parent    Comment?      @relation("CommentReplies", fields: [parentId], references: [id])
+  replies   Comment[]     @relation("CommentReplies")
+
+  status    CommentStatus @default(APPROVED)
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
 }

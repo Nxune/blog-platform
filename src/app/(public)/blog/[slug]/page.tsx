@@ -3,6 +3,8 @@ import { formatDate } from "@/lib/utils";
 import { CommentSection } from "@/components/comments/CommentSection";
 import { notFound } from "next/navigation";
 
+export const dynamic = "force-dynamic";
+
 interface PostPageProps {
   params: Promise<{ slug: string }>;
 }
@@ -23,7 +25,7 @@ export default async function PostPage({ params }: PostPageProps) {
   const { slug } = await params;
   const post = await getPostBySlug(slug);
 
-  if (!post || post.status !== "PUBLISHED") {
+  if (!post || !post.published) {
     notFound();
   }
 

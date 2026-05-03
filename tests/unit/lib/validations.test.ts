@@ -40,6 +40,24 @@ describe('loginSchema', () => {
     });
     expect(result.success).toBe(false);
   });
+
+  it('应拒绝空密码', () => {
+    const result = loginSchema.safeParse({
+      email: 'user@example.com',
+      password: '',
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it('应拒绝缺失 email 字段', () => {
+    const result = loginSchema.safeParse({ password: 'password123' });
+    expect(result.success).toBe(false);
+  });
+
+  it('应拒绝缺失 password 字段', () => {
+    const result = loginSchema.safeParse({ email: 'user@example.com' });
+    expect(result.success).toBe(false);
+  });
 });
 
 // ============================================================
@@ -88,6 +106,38 @@ describe('registerSchema', () => {
       email: 'not-email',
       password: 'strongPass1',
     });
+    expect(result.success).toBe(false);
+  });
+
+  it('应拒绝空用户名', () => {
+    const result = registerSchema.safeParse({
+      name: '',
+      email: 'user@example.com',
+      password: 'strongPass1',
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it('应拒绝空邮箱', () => {
+    const result = registerSchema.safeParse({
+      name: '测试用户',
+      email: '',
+      password: 'strongPass1',
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it('应拒绝空密码', () => {
+    const result = registerSchema.safeParse({
+      name: '测试用户',
+      email: 'user@example.com',
+      password: '',
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it('应拒绝缺失字段', () => {
+    const result = registerSchema.safeParse({});
     expect(result.success).toBe(false);
   });
 });
@@ -165,6 +215,38 @@ describe('postSchema', () => {
     });
     expect(result.success).toBe(false);
   });
+
+  it('应接受有效的 coverImage URL', () => {
+    const result = postSchema.safeParse({
+      title: '标题',
+      content: '内容',
+      coverImage: 'https://example.com/image.jpg',
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('应接受 featured 为 false', () => {
+    const result = postSchema.safeParse({
+      title: '标题',
+      content: '内容',
+      featured: false,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('应跳过空的 tags 数组', () => {
+    const result = postSchema.safeParse({
+      title: '标题',
+      content: '内容',
+      tags: [],
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('应拒绝缺失 title 和 content', () => {
+    const result = postSchema.safeParse({});
+    expect(result.success).toBe(false);
+  });
 });
 
 // ============================================================
@@ -196,6 +278,38 @@ describe('commentSchema', () => {
     const result = commentSchema.safeParse({
       content: '回复内容',
       parentId: 'comment-uuid-123',
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('应处理只含空格的评论（取决于 schema 实现）', () => {
+    const result = commentSchema.safeParse({
+      content: '   ',
+    });
+    // Schema 接受非空字符串，空格算作有效字符
+    expect(result.success).toBe(true);
+  });
+
+  it('应拒绝缺失 content 字段', () => {
+    const result = commentSchema.safeParse({});
+    expect(result.success).toBe(false);
+  });
+
+  it('应拒绝 null content', () => {
+    const result = commentSchema.safeParse({ content: null });
+    expect(result.success).toBe(false);
+  });
+
+  it('应拒绝极长评论（10001 字符）', () => {
+    const result = commentSchema.safeParse({
+      content: 'x'.repeat(10001),
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it('应接受恰好 5000 字符的评论', () => {
+    const result = commentSchema.safeParse({
+      content: 'x'.repeat(5000),
     });
     expect(result.success).toBe(true);
   });

@@ -34,7 +34,7 @@ vi.mock('@/lib/validations', () => ({
   },
 }));
 
-import { listPosts, getPostBySlug, createPost, updatePost, deletePost } from '@/services/post.service';
+import { listPosts, getPostBySlug, createPost, updatePost, deletePost, updateViewCount } from '@/services/post.service';
 import { requireAuth, requireAdmin } from '@/lib/auth-helpers';
 
 const mockPost = {
@@ -125,7 +125,7 @@ describe('GET /api/posts', () => {
     expect(listPosts).toHaveBeenCalledWith(expect.objectContaining({ page: 3, pageSize: 20 }));
   });
 
-  it('应传递已发布筛选参数', async () => {
+  it('应传递已发布筛选参数（published=true）', async () => {
     vi.mocked(listPosts).mockResolvedValue({
       posts: [mockPost], total: 1, page: 1, pageSize: 10, totalPages: 1,
     });
@@ -213,6 +213,15 @@ describe('GET /api/posts/[slug]', () => {
     } as any);
     expect(res.status).toBe(404);
   });
+
+  it('应异步增加浏览次数', async () => {
+    vi.mocked(getPostBySlug).mockResolvedValue(mockPost as any);
+    const { GET } = await getBySlugHandler();
+    await GET(new Request('http://localhost:3000/api/posts/test-post'), {
+      params: Promise.resolve({ slug: 'test-post' }),
+    } as any);
+    expect(updateViewCount).toHaveBeenCalledWith('test-post');
+  });
 });
 
 describe('PATCH /api/posts/[slug]', () => {
@@ -292,5 +301,15 @@ describe('DELETE /api/posts/[slug]', () => {
       params: Promise.resolve({ slug: 'test-post' }),
     } as any);
     expect(res.status).toBe(403);
+  });
+
+  it('应返回 404 给不存在的文章', async () => {
+    vi.mocked(requireAdmin).mockResolvedValue({ user: { id: 'admin-1' } } as any);
+    vi.mocked(getPostBySlug).mockResolvedValue(null);
+    const { DELETE } = await getBySlugHandler();
+    const res = await DELETE(new Request('http://localhost:3000/api/posts/test-post'), {
+      params: Promise.resolve({ slug: 'test-post' }),
+    } as any);
+    expect(res.status).toBe(404);
   });
 });

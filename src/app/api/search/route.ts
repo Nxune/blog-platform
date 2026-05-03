@@ -14,7 +14,7 @@ export async function GET(request: Request) {
     page,
     pageSize: 10,
     search: q,
-    status: "PUBLISHED",
+    published: true,
   });
 
   return NextResponse.json(result);

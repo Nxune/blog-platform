@@ -1,9 +1,10 @@
 import { prisma } from "@/lib/prisma";
 import type { Comment } from "@/types/comment";
+import type { CommentStatus } from "@prisma/client";
 
 const commentInclude = {
   author: {
-    select: { id: true, name: true, email: true, avatar: true },
+    select: { id: true, name: true, email: true, image: true },
   },
 } as const;
 
@@ -12,12 +13,9 @@ function mapComment(comment: Record<string, unknown>): Comment {
   const replies = comment.replies as Record<string, unknown>[] | undefined;
   return {
     ...comment,
-    isApproved: (comment.isApproved as boolean) ?? true,
+    status: (comment.status as CommentStatus) ?? "APPROVED",
     author: author
-      ? {
-          ...author,
-          image: (author.avatar as string | null) ?? null,
-        }
+      ? { ...author, image: (author.image as string | null) ?? null }
       : (undefined as unknown as Comment["author"]),
     replies: replies ? replies.map(mapComment) : undefined,
   } as Comment;
@@ -34,7 +32,7 @@ export async function getCommentsByPostSlug(postSlug: string) {
   const comments = await prisma.comment.findMany({
     where: {
       postId: post.id,
-      isApproved: true,
+      status: "APPROVED",
     },
     include: {
       ...commentInclude,
@@ -57,10 +55,10 @@ export async function createComment(data: {
 }) {
   const post = await prisma.post.findUnique({
     where: { slug: data.postSlug },
-    select: { id: true, status: true },
+    select: { id: true, published: true },
   });
 
-  if (!post || post.status !== "PUBLISHED") {
+  if (!post || !post.published) {
     throw new Error("POST_NOT_FOUND");
   }
 
@@ -73,7 +71,7 @@ export async function createComment(data: {
     }
   }
 
-  const isApproved = !detectSpam(data.content);
+  const status: CommentStatus = detectSpam(data.content) ? "PENDING" : "APPROVED";
 
   const comment = await prisma.comment.create({
     data: {
@@ -81,7 +79,7 @@ export async function createComment(data: {
       authorId: data.authorId,
       postId: post.id,
       parentId: data.parentId ?? null,
-      isApproved,
+      status,
     },
     include: commentInclude,
   });
@@ -89,10 +87,10 @@ export async function createComment(data: {
   return mapComment(comment);
 }
 
-export async function setCommentApproval(commentId: string, isApproved: boolean) {
+export async function moderateComment(commentId: string, status: CommentStatus) {
   const comment = await prisma.comment.update({
     where: { id: commentId },
-    data: { isApproved },
+    data: { status },
     include: commentInclude,
   });
   return mapComment(comment);
@@ -105,10 +103,10 @@ export async function deleteComment(commentId: string) {
 export async function listAllComments(params: {
   page?: number;
   pageSize?: number;
-  isApproved?: boolean;
+  status?: CommentStatus;
 }) {
-  const { page = 1, pageSize = 20, isApproved } = params;
-  const where = isApproved !== undefined ? { isApproved } : {};
+  const { page = 1, pageSize = 20, status } = params;
+  const where = status !== undefined ? { status } : {};
 
   const [comments, total] = await Promise.all([
     prisma.comment.findMany({
@@ -127,7 +125,7 @@ export async function listAllComments(params: {
   return {
     comments: comments.map((c) => ({
       ...c,
-      author: { ...c.author, image: c.author.avatar ?? null },
+      author: { ...c.author, image: c.author.image ?? null },
     })),
     total,
     page,

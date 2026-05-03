@@ -2,7 +2,7 @@ import type { Role } from "@prisma/client";
 
 export interface UserProfile {
   id: string;
-  name: string;
+  name: string | null;
   email: string;
   image: string | null;
   role: Role;

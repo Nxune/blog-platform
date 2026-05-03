@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
-import { setCommentApproval } from "@/services/comment.service";
+import { moderateComment } from "@/services/comment.service";
 import { requireAdmin } from "@/lib/auth-helpers";
+import type { CommentStatus } from "@prisma/client";
+
+const validStatuses: CommentStatus[] = ["PENDING", "APPROVED", "SPAM", "DELETED"];
 
 export async function PATCH(
   request: Request,
@@ -14,12 +17,12 @@ export async function PATCH(
 
   const { id } = await params;
   const body = await request.json();
-  const { approved } = body;
+  const { status } = body;
 
-  if (typeof approved !== "boolean") {
-    return NextResponse.json({ error: "approved 必须是布尔值" }, { status: 400 });
+  if (!validStatuses.includes(status)) {
+    return NextResponse.json({ error: "无效的状态" }, { status: 400 });
   }
 
-  const comment = await setCommentApproval(id, approved);
+  const comment = await moderateComment(id, status);
   return NextResponse.json(comment);
 }

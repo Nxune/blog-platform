@@ -1,15 +1,14 @@
 import { prisma } from "@/lib/prisma";
 import { slugify } from "@/lib/utils";
-import type { PostStatus } from "@prisma/client";
+import type { Post } from "@/types/post";
 
 const postInclude = {
   author: {
-    select: { id: true, name: true, email: true, avatar: true },
+    select: { id: true, name: true, email: true, image: true },
   },
   tags: {
     include: { tag: true },
   },
-  category: true,
   _count: {
     select: { comments: true },
   },
@@ -18,18 +17,18 @@ const postInclude = {
 export interface ListPostsParams {
   page?: number;
   pageSize?: number;
-  status?: PostStatus;
+  published?: boolean;
   tag?: string;
   search?: string;
   authorId?: string;
 }
 
 export async function listPosts(params: ListPostsParams) {
-  const { page = 1, pageSize = 10, status, tag, search, authorId } = params;
+  const { page = 1, pageSize = 10, published, tag, search, authorId } = params;
 
   const where: Record<string, unknown> = {};
 
-  if (status) where.status = status;
+  if (published !== undefined) where.published = published;
   if (authorId) where.authorId = authorId;
 
   if (tag) {
@@ -84,9 +83,8 @@ export async function createPost(data: {
   content: string;
   excerpt?: string;
   coverImage?: string;
-  status?: PostStatus;
+  published?: boolean;
   tags?: string[];
-  categoryId?: string;
   authorId: string;
 }) {
   const slug = slugify(data.title);
@@ -100,10 +98,9 @@ export async function createPost(data: {
       content: data.content,
       excerpt: data.excerpt,
       coverImage: data.coverImage,
-      status: data.status ?? "DRAFT",
-      publishedAt: data.status === "PUBLISHED" ? new Date() : null,
+      published: data.published ?? false,
+      publishedAt: data.published ? new Date() : null,
       authorId: data.authorId,
-      categoryId: data.categoryId,
       tags: data.tags
         ? {
             create: data.tags.map((tagId) => ({
@@ -125,9 +122,8 @@ export async function updatePost(
     content?: string;
     excerpt?: string;
     coverImage?: string;
-    status?: PostStatus;
+    published?: boolean;
     tags?: string[];
-    categoryId?: string | null;
   }
 ) {
   const updateData: Record<string, unknown> = {};
@@ -139,16 +135,15 @@ export async function updatePost(
   if (data.content !== undefined) updateData.content = data.content;
   if (data.excerpt !== undefined) updateData.excerpt = data.excerpt;
   if (data.coverImage !== undefined) updateData.coverImage = data.coverImage;
-  if (data.status !== undefined) {
-    updateData.status = data.status;
-    updateData.publishedAt = data.status === "PUBLISHED" ? new Date() : null;
+  if (data.published !== undefined) {
+    updateData.published = data.published;
+    updateData.publishedAt = data.published ? new Date() : null;
   }
-  if (data.categoryId !== undefined) updateData.categoryId = data.categoryId;
 
   if (data.tags !== undefined) {
-    await prisma.postTag.deleteMany({ where: { postId: id } });
+    await prisma.tagOnPost.deleteMany({ where: { postId: id } });
     if (data.tags.length > 0) {
-      await prisma.postTag.createMany({
+      await prisma.tagOnPost.createMany({
         data: data.tags.map((tagId) => ({ postId: id, tagId })),
       });
     }
@@ -175,14 +170,12 @@ export async function updateViewCount(slug: string) {
   return post.viewCount;
 }
 
-import type { Post } from "@/types/post";
-
 function mapPost(post: Record<string, unknown>): Post {
   const author = post.author as Record<string, unknown> | undefined;
   return {
     ...post,
     author: author
-      ? { ...author, image: author.avatar ?? null }
+      ? { ...author, image: (author.image as string | null) ?? null }
       : undefined,
   } as Post;
 }

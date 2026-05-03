@@ -1,3 +1,5 @@
+import type { CommentStatus } from "@prisma/client";
+
 export interface Comment {
   id: string;
   content: string;
@@ -12,6 +14,6 @@ export interface Comment {
   };
   postId: string;
   parentId: string | null;
-  isApproved: boolean;
+  status: CommentStatus;
   replies?: Comment[];
 }

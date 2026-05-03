@@ -16,7 +16,7 @@ export const postSchema = z.object({
   content: z.string().min(1, "内容不能为空"),
   excerpt: z.string().max(500).optional(),
   coverImage: z.string().url().optional().or(z.literal("")),
-  status: z.enum(["DRAFT", "PUBLISHED", "ARCHIVED"]).optional(),
+  published: z.boolean().optional(),
   tags: z.array(z.string()).optional(),
 });
 

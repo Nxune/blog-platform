@@ -1,6 +1,8 @@
 import { listPosts } from "@/services/post.service";
 import { PostCard } from "@/components/blog/PostCard";
 
+export const dynamic = "force-dynamic";
+
 interface BlogPageProps {
   searchParams: Promise<{ page?: string; tag?: string }>;
 }
@@ -12,7 +14,7 @@ export default async function BlogPage({ searchParams }: BlogPageProps) {
   const { posts, total, totalPages } = await listPosts({
     page,
     pageSize: 10,
-    status: "PUBLISHED",
+    published: true,
     tag: params.tag,
   });
 

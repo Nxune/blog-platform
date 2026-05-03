@@ -167,6 +167,18 @@ describe('POST /api/posts/[slug]/comments', () => {
     }), { params: Promise.resolve({ slug: 'test-post' }) } as any);
     expect(res.status).toBe(400);
   });
+
+  it('应拒绝超长评论并返回 400', async () => {
+    vi.mocked(requireAuth).mockResolvedValue({ user: { id: 'user-1' } } as any);
+
+    const handler = await postCommentHandler();
+    const res = await handler(new Request('http://localhost:3000/api/posts/test-post/comments', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content: 'x'.repeat(5001) }),
+    }), { params: Promise.resolve({ slug: 'test-post' }) } as any);
+    expect(res.status).toBe(400);
+  });
 });
 
 describe('GET /api/comments（管理员）', () => {
@@ -189,6 +201,28 @@ describe('GET /api/comments（管理员）', () => {
     const handler = await getAllCommentsHandler();
     const res = await handler(new Request('http://localhost:3000/api/comments'));
     expect(res.status).toBe(403);
+  });
+
+  it('应支持分页参数', async () => {
+    vi.mocked(requireAdmin).mockResolvedValue({ user: { id: 'admin-1', role: 'ADMIN' } } as any);
+    vi.mocked(listAllComments).mockResolvedValue({
+      comments: [], total: 0, page: 2, pageSize: 10, totalPages: 0,
+    });
+
+    const handler = await getAllCommentsHandler();
+    await handler(new Request('http://localhost:3000/api/comments?page=2&pageSize=10'));
+    expect(listAllComments).toHaveBeenCalledWith(expect.objectContaining({ page: 2, pageSize: 10 }));
+  });
+
+  it('应支持按状态筛选', async () => {
+    vi.mocked(requireAdmin).mockResolvedValue({ user: { id: 'admin-1', role: 'ADMIN' } } as any);
+    vi.mocked(listAllComments).mockResolvedValue({
+      comments: [], total: 0, page: 1, pageSize: 20, totalPages: 0,
+    });
+
+    const handler = await getAllCommentsHandler();
+    await handler(new Request('http://localhost:3000/api/comments?status=PENDING'));
+    expect(listAllComments).toHaveBeenCalledWith(expect.objectContaining({ status: 'PENDING' }));
   });
 });
 

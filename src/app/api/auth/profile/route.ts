@@ -15,7 +15,7 @@ export async function GET() {
       id: true,
       name: true,
       email: true,
-      avatar: true,
+      image: true,
       role: true,
       bio: true,
       createdAt: true,
@@ -26,11 +26,7 @@ export async function GET() {
     return NextResponse.json({ error: "用户不存在" }, { status: 404 });
   }
 
-  return NextResponse.json({
-    ...user,
-    image: user.avatar,
-    avatar: undefined,
-  });
+  return NextResponse.json(user);
 }
 
 export async function PATCH(request: Request) {
@@ -50,16 +46,12 @@ export async function PATCH(request: Request) {
       id: true,
       name: true,
       email: true,
-      avatar: true,
+      image: true,
       role: true,
       bio: true,
       createdAt: true,
     },
   });
 
-  return NextResponse.json({
-    ...user,
-    image: user.avatar,
-    avatar: undefined,
-  });
+  return NextResponse.json(user);
 }

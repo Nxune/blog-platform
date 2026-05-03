@@ -84,4 +84,31 @@ describe('GET /api/search', () => {
     expect(data.posts).toEqual([]);
     expect(data.total).toBe(0);
   });
+
+  it('应始终仅搜索已发布文章', async () => {
+    vi.mocked(listPosts).mockResolvedValue({
+      posts: [], total: 0, page: 1, pageSize: 10, totalPages: 0,
+    });
+    const handler = await searchHandler();
+    await handler(new Request('http://localhost:3000/api/search?q=react'));
+    expect(listPosts).toHaveBeenCalledWith(expect.objectContaining({ published: true }));
+  });
+
+  it('应正确处理特殊字符查询', async () => {
+    vi.mocked(listPosts).mockResolvedValue({
+      posts: [], total: 0, page: 1, pageSize: 10, totalPages: 0,
+    });
+    const handler = await searchHandler();
+    await handler(new Request('http://localhost:3000/api/search?q=C%23+%26+.NET'));
+    expect(listPosts).toHaveBeenCalledWith(expect.objectContaining({ search: 'C# & .NET' }));
+  });
+
+  it('应处理 URL 编码的中文查询', async () => {
+    vi.mocked(listPosts).mockResolvedValue({
+      posts: [], total: 0, page: 1, pageSize: 10, totalPages: 0,
+    });
+    const handler = await searchHandler();
+    await handler(new Request('http://localhost:3000/api/search?q=%E6%90%9C%E7%B4%A2'));
+    expect(listPosts).toHaveBeenCalledWith(expect.objectContaining({ search: '搜索' }));
+  });
 });

@@ -53,6 +53,18 @@ describe('slugify', () => {
   it('应处理只有特殊字符的字符串', () => {
     expect(slugify('!!!---???')).toBe('');
   });
+
+  it('应处理带数字的字符串', () => {
+    expect(slugify('Hello 2 World 3')).toBe('hello-2-world-3');
+  });
+
+  it('应处理下划线', () => {
+    expect(slugify('hello_world_test')).toBe('hello_world_test');
+  });
+
+  it('应转换大写字母为小写', () => {
+    expect(slugify('HELLO WORLD')).toBe('hello-world');
+  });
 });
 
 describe('truncate', () => {
@@ -76,5 +88,24 @@ describe('truncate', () => {
 
   it('应处理空字符串', () => {
     expect(truncate('', 10)).toBe('');
+  });
+
+  it('应处理只有空格的字符串', () => {
+    expect(truncate('     ', 3)).toBe('...');
+  });
+
+  it('应处理长度参数为 0', () => {
+    expect(truncate('Hello', 0)).toBe('...');
+  });
+
+  it('应处理包含中文的文本', () => {
+    // slice(0,6) = '这是一段很长' + replace(/\s+\S*$/) 不匹配 + '...'
+    const result = truncate('这是一段很长的中文文本', 6);
+    expect(result).toBe('这是一段很长...');
+  });
+
+  it('应处理长度 1 的截断', () => {
+    const result = truncate('Hello', 1);
+    expect(result).toBe('H...');
   });
 });

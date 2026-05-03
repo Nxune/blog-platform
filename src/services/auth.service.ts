@@ -8,8 +8,7 @@ export async function getUserById(id: string): Promise<UserProfile | null> {
       id: true,
       name: true,
       email: true,
-      username: true,
-      avatar: true,
+      image: true,
       role: true,
       bio: true,
       createdAt: true,
@@ -18,9 +17,9 @@ export async function getUserById(id: string): Promise<UserProfile | null> {
   if (!user) return null;
   return {
     id: user.id,
-    name: user.name ?? "",
+    name: user.name,
     email: user.email,
-    image: user.avatar,
+    image: user.image,
     role: user.role,
     bio: user.bio,
     createdAt: user.createdAt,
@@ -38,8 +37,7 @@ export async function updateProfile(
       id: true,
       name: true,
       email: true,
-      username: true,
-      avatar: true,
+      image: true,
       role: true,
       bio: true,
       createdAt: true,
@@ -47,9 +45,9 @@ export async function updateProfile(
   });
   return {
     id: user.id,
-    name: user.name ?? "",
+    name: user.name,
     email: user.email,
-    image: user.avatar,
+    image: user.image,
     role: user.role,
     bio: user.bio,
     createdAt: user.createdAt,

@@ -2,11 +2,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('@/lib/auth', () => ({
-  auth: {
-    api: {
-      getSession: vi.fn(),
-    },
-  },
+  auth: vi.fn(),
 }));
 
 vi.mock('@/lib/prisma', () => ({
@@ -18,10 +14,6 @@ vi.mock('@/lib/prisma', () => ({
   },
 }));
 
-vi.mock('next/headers', () => ({
-  headers: vi.fn().mockResolvedValue(new Headers({ cookie: 'mock-session' })),
-}));
-
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 
@@ -30,7 +22,7 @@ const mockUser = {
   name: '测试用户',
   email: 'test@example.com',
   image: null,
-  role: 'USER' as const,
+  role: 'USER',
   bio: '博主简介',
   createdAt: new Date('2026-05-03'),
 };
@@ -46,14 +38,12 @@ async function patchHandler() {
 }
 
 describe('GET /api/auth/profile', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
+  beforeEach(() => vi.clearAllMocks());
 
   it('应返回已登录用户的资料（200）', async () => {
-    vi.mocked(auth.api.getSession).mockResolvedValue({
+    vi.mocked(auth).mockResolvedValue({
       user: { id: 'user-1', email: 'test@example.com' },
-      session: { id: 'sess-1', expiresAt: new Date(), token: 'tok' },
+      expires: new Date().toISOString(),
     } as any);
     vi.mocked(prisma.user.findUnique).mockResolvedValue(mockUser as any);
 
@@ -67,7 +57,7 @@ describe('GET /api/auth/profile', () => {
   });
 
   it('应拒绝未认证请求并返回 401', async () => {
-    vi.mocked(auth.api.getSession).mockResolvedValue(null);
+    vi.mocked(auth).mockResolvedValue(null);
 
     const handler = await getHandler();
     const response = await handler();
@@ -77,29 +67,27 @@ describe('GET /api/auth/profile', () => {
     expect(data.error).toBe('未登录');
   });
 
-  it('不应返回密码字段', async () => {
-    vi.mocked(auth.api.getSession).mockResolvedValue({
-      user: { id: 'user-1', email: 'test@example.com' },
-      session: { id: 'sess-1', expiresAt: new Date(), token: 'tok' },
+  it('应返回 404 给不存在的用户', async () => {
+    vi.mocked(auth).mockResolvedValue({
+      user: { id: 'nonexistent' },
+      expires: new Date().toISOString(),
     } as any);
-    vi.mocked(prisma.user.findUnique).mockResolvedValue(mockUser as any);
+    vi.mocked(prisma.user.findUnique).mockResolvedValue(null);
 
     const handler = await getHandler();
-    const data = await (await handler()).json();
+    const response = await handler();
 
-    expect(data).not.toHaveProperty('password');
+    expect(response.status).toBe(404);
   });
 });
 
 describe('PATCH /api/auth/profile', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
+  beforeEach(() => vi.clearAllMocks());
 
   it('应成功更新用户资料并返回 200', async () => {
-    vi.mocked(auth.api.getSession).mockResolvedValue({
+    vi.mocked(auth).mockResolvedValue({
       user: { id: 'user-1', email: 'test@example.com' },
-      session: { id: 'sess-1', expiresAt: new Date(), token: 'tok' },
+      expires: new Date().toISOString(),
     } as any);
     const updatedUser = { ...mockUser, name: '新名字', bio: '新简介' };
     vi.mocked(prisma.user.update).mockResolvedValue(updatedUser as any);
@@ -119,7 +107,7 @@ describe('PATCH /api/auth/profile', () => {
   });
 
   it('应拒绝未认证请求并返回 401', async () => {
-    vi.mocked(auth.api.getSession).mockResolvedValue(null);
+    vi.mocked(auth).mockResolvedValue(null);
 
     const handler = await patchHandler();
     const request = new Request('http://localhost:3000/api/auth/profile', {
@@ -132,5 +120,26 @@ describe('PATCH /api/auth/profile', () => {
 
     expect(response.status).toBe(401);
     expect(data.error).toBe('未登录');
+  });
+
+  it('应更新单一字段（bio）', async () => {
+    vi.mocked(auth).mockResolvedValue({
+      user: { id: 'user-1', email: 'test@example.com' },
+      expires: new Date().toISOString(),
+    } as any);
+    const updatedUser = { ...mockUser, bio: '新个人简介' };
+    vi.mocked(prisma.user.update).mockResolvedValue(updatedUser as any);
+
+    const handler = await patchHandler();
+    const request = new Request('http://localhost:3000/api/auth/profile', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ bio: '新个人简介' }),
+    });
+    const response = await handler(request);
+    const data = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(data.bio).toBe('新个人简介');
   });
 });

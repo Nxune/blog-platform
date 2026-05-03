@@ -14,6 +14,11 @@ vi.mock('@/lib/auth-helpers', () => ({
 import { listTags, createTag, deleteTag } from '@/services/tag.service';
 import { requireAdmin } from '@/lib/auth-helpers';
 
+const mockTags = [
+  { id: '1', name: '技术', slug: 'tech', _count: { posts: 5 } },
+  { id: '2', name: '前端', slug: 'frontend', _count: { posts: 3 } },
+];
+
 async function getHandler() {
   const { GET } = await import('@/app/api/tags/route');
   return GET;
@@ -43,6 +48,22 @@ describe('GET /api/tags', () => {
     const data = await res.json();
     expect(res.status).toBe(200);
     expect(data).toHaveLength(2);
+  });
+
+  it('空数据库应返回空数组', async () => {
+    vi.mocked(listTags).mockResolvedValue([]);
+    const handler = await getHandler();
+    const res = await handler();
+    const data = await res.json();
+    expect(data).toEqual([]);
+  });
+
+  it('应包含文章计数', async () => {
+    vi.mocked(listTags).mockResolvedValue(mockTags as any);
+    const handler = await getHandler();
+    const data = await (await handler()).json();
+    expect(data[0]._count.posts).toBe(5);
+    expect(data[1]._count.posts).toBe(3);
   });
 });
 
@@ -97,6 +118,18 @@ describe('POST /api/tags', () => {
       body: JSON.stringify({ name: '已存在' }),
     }));
     expect(res.status).toBe(409);
+  });
+
+  it('应拒绝非字符串 name 并返回 400', async () => {
+    vi.mocked(requireAdmin).mockResolvedValue({ user: { id: 'admin-1' } } as any);
+
+    const handler = await postHandler();
+    const res = await handler(new Request('http://localhost:3000/api/tags', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: 123 }),
+    }));
+    expect(res.status).toBe(400);
   });
 });
 
