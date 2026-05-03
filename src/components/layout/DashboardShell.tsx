@@ -26,12 +26,13 @@ export function DashboardShell({ children }: DashboardShellProps) {
   return (
     <AuthGuard>
       <div className="flex min-h-[calc(100vh-4rem)]">
-        <aside className="hidden w-56 border-r md:block">
+        <aside className="hidden w-56 shrink-0 border-r md:block">
           <nav className="space-y-1 p-4">
             {navItems.map(({ href, label }) => (
               <Link
                 key={href}
                 href={href}
+                aria-current={pathname === href || (href !== "/dashboard" && pathname.startsWith(href)) ? "page" : undefined}
                 className={`block rounded-lg px-3 py-2 text-sm ${
                   pathname === href || (href !== "/dashboard" && pathname.startsWith(href))
                     ? "bg-primary/10 font-medium text-primary"
@@ -43,7 +44,25 @@ export function DashboardShell({ children }: DashboardShellProps) {
             ))}
           </nav>
         </aside>
-        <main className="flex-1 p-6">{children}</main>
+        <div className="flex min-w-0 flex-1 flex-col">
+          <nav className="flex gap-1 overflow-x-auto border-b px-4 py-2 md:hidden" aria-label="仪表盘导航">
+            {navItems.map(({ href, label }) => (
+              <Link
+                key={href}
+                href={href}
+                aria-current={pathname === href || (href !== "/dashboard" && pathname.startsWith(href)) ? "page" : undefined}
+                className={`shrink-0 whitespace-nowrap rounded-lg px-3 py-1.5 text-sm ${
+                  pathname === href || (href !== "/dashboard" && pathname.startsWith(href))
+                    ? "bg-primary/10 font-medium text-primary"
+                    : "text-muted-foreground hover:bg-muted"
+                }`}
+              >
+                {label}
+              </Link>
+            ))}
+          </nav>
+          <main className="flex-1 p-6">{children}</main>
+        </div>
       </div>
     </AuthGuard>
   );
